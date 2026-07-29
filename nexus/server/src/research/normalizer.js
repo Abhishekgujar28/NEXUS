@@ -1,0 +1,16 @@
+export const normalizeSource = (raw, projectId, jobId) => ({
+  projectId,
+  jobId,
+  sourceType: raw.sourceType || 'web',
+  title: raw.title || 'Untitled',
+  url: raw.url || '',
+  authors: raw.authors || [],
+  publishedAt: raw.publishedAt || null,
+  snippet: raw.snippet || '',
+  content: raw.content || '',
+  metadata: raw.metadata || {},
+  query: raw.query || '',
+  relevanceScore: raw.relevanceScore || 0,
+  credibilityScore: raw.credibilityScore || 0,
+  evidenceScore: raw.evidenceScore || 0,
+});

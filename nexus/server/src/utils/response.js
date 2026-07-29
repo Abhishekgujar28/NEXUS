@@ -1,0 +1,5 @@
+export const success = (res, data, status = 200) =>
+  res.status(status).json({ success: true, data });
+
+export const error = (res, message, code = 'INTERNAL_ERROR', status = 500) =>
+  res.status(status).json({ success: false, error: { message, code } });

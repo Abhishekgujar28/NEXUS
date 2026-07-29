@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * NEXUS design tokens.
+ * Dark is the default surface — research sessions are long.
+ * Light mode is available for print & shared reports.
+ */
+@layer base {
+  :root {
+    /* Light (paper) */
+    --background: 44 30% 97%;
+    --foreground: 40 8% 12%;
+    --surface: 44 30% 99%;
+    --surface-raised: 0 0% 100%;
+    --surface-sink: 44 20% 94%;
+    --muted: 42 14% 92%;
+    --muted-foreground: 40 6% 42%;
+    --border: 42 14% 88%;
+    --input: 42 14% 90%;
+    --ring: 72 62% 55%;
+    --accent: 72 62% 55%;
+    --accent-foreground: 40 8% 10%;
+    --destructive: 12 62% 55%;
+    --destructive-foreground: 0 0% 100%;
+  }
+
+  .dark {
+    /* Ink */
+    --background: 40 8% 5%;
+    --foreground: 44 20% 92%;
+    --surface: 40 8% 7%;
+    --surface-raised: 40 8% 10%;
+    --surface-sink: 40 8% 4%;
+    --muted: 40 6% 14%;
+    --muted-foreground: 44 10% 58%;
+    --border: 40 6% 16%;
+    --input: 40 6% 18%;
+    --ring: 72 62% 55%;
+    --accent: 72 62% 55%;
+    --accent-foreground: 40 8% 6%;
+    --destructive: 12 55% 60%;
+    --destructive-foreground: 40 8% 6%;
+  }
+
+  * {
+    @apply border-border;
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: 'ss01', 'cv02', 'cv11';
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: hsl(var(--accent) / 0.35);
+    color: hsl(var(--foreground));
+  }
+
+  /* Editorial number formatting for scores etc. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+}
+
+@layer components {
+  .text-display {
+    font-family: 'Instrument Serif', Georgia, serif;
+    letter-spacing: -0.015em;
+    line-height: 1.05;
+  }
+  .eyebrow {
+    @apply text-2xs uppercase tracking-[0.14em] text-muted-foreground font-medium;
+  }
+  .mono-label {
+    @apply font-mono text-2xs uppercase tracking-[0.12em] text-muted-foreground;
+  }
+  .surface-card {
+    @apply bg-surface-raised border border-border rounded-lg;
+  }
+  .divider-dot::before {
+    content: '·';
+    @apply mx-2 text-muted-foreground;
+  }
+  .noise-bg {
+    background-image: radial-gradient(hsl(var(--muted-foreground) / 0.06) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.25) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.35);
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .gradient-mask-b {
+    -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 60%, transparent 100%);
+  }
+}
