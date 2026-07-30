@@ -5,6 +5,7 @@ import { connectRedis, redis } from './core/redis.js';
 import { logger } from './core/logger.js';
 import { createApp } from './app.js';
 import mongoose from 'mongoose';
+import { createSocketServer } from './socket/socket.server.js';
 
 const start = async (): Promise<void> => {
   // Fail fast on missing/weak security configuration before anything runs.
@@ -15,6 +16,7 @@ const start = async (): Promise<void> => {
 
   const app = createApp();
   const server = http.createServer(app);
+  createSocketServer(server);
 
   server.listen(config.port, () => {
     logger.info(`Server listening on port ${config.port}`);

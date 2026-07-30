@@ -8,6 +8,13 @@ export const config = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   mongoUri: process.env.MONGODB_URI || 'mongodb://localhost:27017/nexus',
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB || '0', 10),
+    url: process.env.REDIS_URL || 'redis://localhost:6379',
+  },
   jwt: {
     // No hardcoded fallbacks — validated at startup by validateConfig().
     secret: process.env.JWT_SECRET || '',
@@ -16,6 +23,31 @@ export const config = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
   geminiApiKey: process.env.GEMINI_API_KEY || '',
+  defaultAiProvider: process.env.DEFAULT_AI_PROVIDER || 'openrouter',
+  ai: {
+    openrouter: {
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+    },
+    gemini: {
+      apiKey: process.env.GEMINI_API_KEY || '',
+    },
+    openai: {
+      apiKey: process.env.OPENAI_API_KEY || '',
+    },
+    anthropic: {
+      apiKey: process.env.ANTHROPIC_API_KEY || '',
+    },
+    groq: {
+      apiKey: process.env.GROQ_API_KEY || '',
+    },
+    deepseek: {
+      apiKey: process.env.DEEPSEEK_API_KEY || '',
+    },
+    together: {
+      apiKey: process.env.TOGETHER_API_KEY || '',
+    },
+  },
   serperApiKey: process.env.SERPER_API_KEY || '',
   githubToken: process.env.GITHUB_TOKEN || '',
   semanticScholarApiKey: process.env.SEMANTIC_SCHOLAR_API_KEY || '',
@@ -52,6 +84,14 @@ export const validateConfig = (): void => {
       `Missing required environment variables: ${missing.join(', ')}. ` +
         `Set them (see .env.example) before starting the server.`
     );
+  }
+
+  if (isNaN(config.redis.port) || config.redis.port <= 0 || config.redis.port > 65535) {
+    throw new Error(`Invalid REDIS_PORT: "${process.env.REDIS_PORT}". Must be a valid port number (1-65535).`);
+  }
+
+  if (config.redis.url && !/^rediss?:\/\//i.test(config.redis.url)) {
+    throw new Error(`Invalid REDIS_URL format: "${config.redis.url}". Must start with redis:// or rediss://`);
   }
 
   if (config.env === 'production') {

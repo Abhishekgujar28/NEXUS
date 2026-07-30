@@ -10,7 +10,7 @@ const projectSchema = new mongoose.Schema(
     projectType: String,
     targetUsers: String,
     platform: String,
-    preferredTech: String,
+    preferredTech: { type: [String], default: [] },
     constraints: String,
     teamSize: { type: Number, min: 1, max: 100 },
     timeline: String,

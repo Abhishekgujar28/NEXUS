@@ -113,7 +113,7 @@ Provide the authoritative reference for every MongoDB collection in NEXUS. Any n
 | `projectType` | String | No | — | — |
 | `targetUsers` | String | No | — | — |
 | `platform` | String | No | — | — |
-| `preferredTech` | String | No | — | — |
+| `preferredTech` | [String] | No | `[]` | — |
 | `constraints` | String | No | — | — |
 | `teamSize` | Number | No | — | min: 1, max: 100 |
 | `timeline` | String | No | — | — |

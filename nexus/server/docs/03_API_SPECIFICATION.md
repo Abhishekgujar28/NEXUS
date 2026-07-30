@@ -420,7 +420,7 @@ Client                    Server                    MongoDB
   "projectType": "web app",            // optional
   "targetUsers": "doctors, patients",  // optional
   "platform": "web",                   // optional
-  "preferredTech": "React, Node.js",   // optional
+  "preferredTech": ["React", "Node.js"], // optional string array
   "constraints": "HIPAA compliance",   // optional
   "teamSize": 3,                       // 1-100, optional
   "timeline": "3 months",             // optional
@@ -678,7 +678,7 @@ Client              Server                     MongoDB            [PLANNED] Redi
   "data": {
     "architecture": { ... } | null,
     "recommendations": [ ... ],
-    "preferredTech": "React, Node.js" | null,
+    "preferredTech": ["React", "Node.js"],
     "constraints": "HIPAA compliance" | null
   }
 }

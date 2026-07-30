@@ -228,7 +228,7 @@ Body:
   "projectType": "web application",
   "targetUsers": "patients, doctors",
   "platform": "web, mobile",
-  "preferredTech": "React, Node.js, TensorFlow",
+  "preferredTech": ["React", "Node.js", "TensorFlow"],
   "constraints": "HIPAA compliance required",
   "teamSize": 4,
   "timeline": "6 months",

@@ -117,7 +117,7 @@ Client              Server                              MongoDB
 | `projectType` | string | No | — |
 | `targetUsers` | string | No | — |
 | `platform` | string | No | — |
-| `preferredTech` | string | No | — |
+| `preferredTech` | string[] | No | Array of strings |
 | `constraints` | string | No | — |
 | `teamSize` | number | No | Integer, 1–100 |
 | `timeline` | string | No | — |

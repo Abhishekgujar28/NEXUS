@@ -10,6 +10,8 @@ import authRoutes from './routes/auth.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import researchRoutes from './routes/research.routes.js';
 import copilotRoutes from './routes/copilot.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
+import systemRoutes from './routes/system.routes.js';
 
 /**
  * Builds and configures the Express application. Kept separate from server
@@ -43,6 +45,8 @@ export const createApp = (): Application => {
   app.use('/api/v1/projects', projectRoutes);
   app.use('/api/v1/research/:id', researchRoutes);
   app.use('/api/v1/copilot/:id', copilotRoutes);
+  app.use('/api/v1/notifications', notificationRoutes);
+  app.use('/api/v1/system', systemRoutes);
 
   app.use((_req, _res, next) => {
     next(new AppError('Route not found', 404, ErrorCodes.NOT_FOUND));

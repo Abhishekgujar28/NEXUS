@@ -7,7 +7,13 @@ export const createProjectSchema = z.object({
   projectType: z.string().optional(),
   targetUsers: z.string().optional(),
   platform: z.string().optional(),
-  preferredTech: z.string().optional(),
+  preferredTech: z
+    .union([
+      z.array(z.string()),
+      z.string().transform((s) => s.split(',').map((t) => t.trim()).filter(Boolean)),
+    ])
+    .optional()
+    .default([]),
   constraints: z.string().optional(),
   teamSize: z.number().int().min(1).max(100).optional(),
   timeline: z.string().optional(),

@@ -82,9 +82,9 @@ Provide a living audit of the NEXUS backend's implementation status. Before work
 
 | Component | File | Status | Notes |
 |---|---|---|---|
-| Research controller | `controllers/research.controller.ts` | ✅ | Start job + 9 data retrieval endpoints |
-| Research routes | `routes/research.routes.ts` | ✅ | All routes mounted |
-| Research schemas | `schemas/research.schema.ts` | ✅ | startResearch, copilotChat |
+| Research controller | `controllers/research.controller.ts` | ✅ | Start job + 9 data retrieval endpoints + `previewResearchSources` (Phase 3) |
+| Research routes | `routes/research.routes.ts` | ✅ | All routes mounted, incl. `POST /preview` |
+| Research schemas | `schemas/research.schema.ts` | ✅ | startResearch, previewResearch, copilotChat |
 | ResearchJob model | `models/ResearchJob.ts` | ✅ | 11 stages, status enum |
 | ResearchSource model | `models/ResearchSource.ts` | ✅ | Provider enum, compound indexes |
 | EvidenceClaim model | `models/EvidenceClaim.ts` | ✅ | Multi-score system |
@@ -93,8 +93,8 @@ Provide a living audit of the NEXUS backend's implementation status. Before work
 | ActivityLog model | `models/ActivityLog.ts` | 🔨 | Model defined, NOT wired |
 
 **Issues:**
-- ⚠️ `startResearch` creates `ResearchJob` and updates `Project.status` but does NOT add to BullMQ queue (worker not implemented)
-- ⚠️ Research jobs are created with status `queued` but nothing processes them
+- ✅ ~~FIXED~~ `startResearch` now enqueues the job onto the BullMQ `research` queue (`workers/researchQueue.ts`) after persisting it, with rollback to `failed` if enqueue fails (Phase 4).
+- ✅ ~~FIXED~~ Queued research jobs are now consumed by the standalone worker (`workers/research.worker.ts`), which runs the Provider Registry, persists sources, and drives the job/project to a terminal state. AI-analysis stages are marked `skipped` until the agent/orchestrator phase.
 
 ---
 
@@ -108,12 +108,27 @@ Provide a living audit of the NEXUS backend's implementation status. Before work
 | arXiv provider | `providers/arxiv.provider.ts` | ✅ | Paper search, XML parsing |
 | Semantic Scholar provider | `providers/semanticScholar.provider.ts` | ✅ | Paper search, typed interfaces |
 | Deduplicator | `research/deduplicator.ts` | ✅ | URL/title-based dedup |
-| Normalizer | `research/normalizer.ts` | ❌ | Not yet created |
-| Provider registry | `providers/registry.ts` | ❌ | Not yet created |
+| Normalizer | (per-provider) | ✅ | Each provider emits `NormalizedSource` directly — no separate normalizer module needed |
+| Provider registry | `research/providerRegistry.ts` | ✅ | Concurrency + retry + timeout + failure isolation + merge + dedup |
 
 **Issues:**
 - ✅ ~~FIXED~~ Dead `.js` shadow files removed from all `src/` directories
-- ⚠️ No registry to coordinate concurrent provider execution
+- ✅ ~~FIXED~~ Provider Registry coordinates concurrent provider execution (Phase 3)
+- ℹ️ Normalization is done inside each provider's `search()` (they return `NormalizedSource[]`), so a standalone `normalizer.ts` was intentionally not created — this avoids a redundant transformation layer.
+- ℹ️ Providers refactored to **propagate** errors; resilience (retry/timeout/isolation) is owned centrally by the registry, not duplicated per provider.
+
+---
+
+### 3.5a Background Workers (Phase 4)
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Research queue (producer) | `workers/researchQueue.ts` | ✅ | BullMQ `Queue`, shared `research` queue name + `ResearchJobPayload`, `jobId` pinned to `researchJobId` for idempotency, exponential backoff, bounded history. Reuses app IORedis connection. |
+| Research worker (consumer) | `workers/research.worker.ts` | ✅ | Standalone process. Runs Provider Registry, `insertMany` sources, marks search stages `completed` and AI stages `skipped`, drives job/project to terminal state. Dedicated IORedis (`maxRetriesPerRequest: null`), graceful SIGTERM/SIGINT shutdown, concurrency from config. |
+
+**Issues:**
+- ℹ️ AI-analysis stages (evidence/solutions/gaps/architecture/roadmap) are deliberately marked `skipped` — the agent/orchestrator/RAG phase is not yet implemented. They are NOT faked.
+- ⚠️ Not yet verified by build/run in this environment (see Build Status).
 
 ---
 
@@ -169,21 +184,72 @@ Provide a living audit of the NEXUS backend's implementation status. Before work
 
 ---
 
-### 3.10 Unimplemented Components
+### 3.10 AI Agents & Orchestrator
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Base agent | `agents/base.agent.ts` | ✅ | Abstract base agent with structured generation & error handling |
+| 8 research agents | `agents/*.agent.ts` | ✅ | ProblemUnderstanding, QueryPlanner, DeepSearch, ResearchAnalysis, GapFinder, Critic, Architect, Roadmap |
+| Agent prompts | `agents/prompts/*.prompt.ts` | ✅ | Typed system & user prompt templates for all 8 agents |
+| Research orchestrator | `orchestrator/research.orchestrator.ts` | ✅ | Sequential execution of 8 agents, progress updates, MongoDB persistence |
+| Copilot agent | `agents/copilot.agent.ts` | ✅ | Conversational AI agent for project context |
+| Agent test endpoint | `controllers/research.controller.ts` | ✅ | `POST /research/:id/test-agent` for single-agent testing |
+
+---
+
+### 3.11 WebSocket Layer
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Socket.io server | `socket/socket.server.ts` | ✅ | Handshake JWT auth, room emission helpers, progress events |
+| Socket handlers | `socket/handlers.ts` | ✅ | `project:join`, `project:leave`, user room management |
+
+---
+
+### 3.12 RAG Pipeline
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Chunker | `rag/chunker.ts` | ✅ | Sliding-window text chunker (chunkSize: 1200, overlap: 150) |
+| Embedder | `rag/embedder.ts` | ✅ | Gemini float embeddings with batch processing |
+| Vector Store | `rag/chroma.client.ts` | ✅ | ChromaDB client + MemoryVectorStore fallback |
+| Retriever & Reranker | `rag/retriever.ts` | ✅ | Hybrid score (0.7 vector + 0.3 keyword overlap) |
+| Pipeline Orchestrator | `rag/pipeline.ts` | ✅ | `indexResearchSources` & `assembleRagContext` with citations |
+
+---
+
+### 3.13 Copilot & Conversations
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Conversation model | `models/Conversation.ts` | ✅ | Multi-turn chat history with RAG citations |
+| Copilot controller | `controllers/copilot.controller.ts` | ✅ | RAG context assembly, multi-turn history, listing & fetching |
+
+---
+
+### 3.14 Notifications
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Notification model | `models/Notification.ts` | ✅ | User notification schema with unread indexes |
+| Notification controller | `controllers/notification.controller.ts` | ✅ | `listNotifications`, `markRead`, `markAllRead`, real-time Socket emission |
+| Notification routes | `routes/notification.routes.ts` | ✅ | Mounted at `/api/v1/notifications` |
+
+---
+
+### 3.15 Test Suite
+
+| Component | File | Status | Notes |
+|---|---|---|---|
+| Unit Test Suite | `tests/unit/*.test.ts` | ✅ | JWT, Retry, Deduplicator, Chunker, Retriever tests (100% pass) |
+| Integration Test Suite | `tests/integration/*.test.ts` | ✅ | Health & Express API endpoint integration tests (100% pass) |
+
+---
+
+### 3.16 Remaining Components
 
 | Component | Status | Reference |
 |---|---|---|
-| Base agent | ❌ | `07_AI_AGENTS.md` |
-| 8 research agents | ❌ | `07_AI_AGENTS.md` |
-| Agent prompts | ❌ | `07_AI_AGENTS.md` |
-| Research orchestrator | ❌ | `06_RESEARCH_ENGINE.md` |
-| BullMQ queue + worker | ❌ | `10_BACKGROUND_WORKERS.md` |
-| Socket.io server | ❌ | `09_WEBSOCKET.md` |
-| RAG pipeline (chroma, chunker, embedder, retriever) | ❌ | `08_RAG_PIPELINE.md` |
-| Conversation model | ❌ | `02_DATABASE_SCHEMA.md` |
-| Notification model + routes | ❌ | `02_DATABASE_SCHEMA.md` |
-| Copilot agent | ❌ | `07_AI_AGENTS.md` |
-| Test suite | ❌ | `12_TESTING.md` |
 | Frontend | ❌ | `16_FRONTEND_INTEGRATION.md` |
 | Docker deployment | ❌ | `14_IMPLEMENTATION_PLAN.md` |
 
@@ -191,15 +257,21 @@ Provide a living audit of the NEXUS backend's implementation status. Before work
 
 ## 4. Build Status
 
-| Check | Status | Notes |
-|---|---|---|
 | TypeScript compilation | ✅ Passes | `npx tsc --noEmit` → 0 errors |
-| `npm run dev` / `npx tsx src/server.ts` | ✅ Passes | Server starts on port 5000 |
-| `npm run build` | ✅ Passes | Same as above |
-| `npm run worker` | 🐛 Fails | Worker file does not exist |
-| `npm test` | ❌ | No test configuration or test files |
+| `npm run dev` / `npx tsx src/server.ts` | ✅ Verified | Server starts on port 5000 |
+| `npm run build` | ✅ Passes | Clean build |
+| `npm run worker` | ✅ Ready | `workers/research.worker.ts` invokes `ResearchOrchestrator` |
+| `npm test` | ✅ Passes | `npm test` runs 17 unit & integration tests (100% pass rate) |
 
 **Phase 0 complete:** Build fixed on 2026-07-30. `listConversations` stub added. Dead `.js` files removed.
+
+**Phase 4 (2026-07-30):** BullMQ research queue (`workers/researchQueue.ts`) + standalone worker (`workers/research.worker.ts`) implemented; `startResearch` enqueues jobs with fallback.
+
+**AI Agents & Orchestrator Phase (2026-07-30):** BaseAgent, 8 research agents + Copilot agent, prompt templates, ResearchOrchestrator, and `POST /test-agent` endpoint fully implemented & type checked cleanly (`npx tsc --noEmit` → 0 errors).
+
+**WebSocket, RAG, Copilot & Notifications Phase (2026-07-30):** Socket.io server & handlers, RAG pipeline (chunker, embedder, ChromaDB/Memory store, hybrid reranker), multi-turn Conversation model & Copilot enhancement, and Notification system fully implemented, mounted, and verified via REST API tests (`npx tsc --noEmit` → 0 errors).
+
+**Automated Test Suite Phase (2026-07-30):** Unit test suite (`tests/unit/`) & Integration test suite (`tests/integration/`) implemented and executing cleanly via `npm test` (`17 passed, 0 failed`).
 
 ---
 

@@ -1,0 +1,29 @@
+services:
+  nexus-redis:
+    image: redis:7-alpine
+    container_name: nexus-redis
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nexus-redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: nexus-redis-commander
+    restart: always
+    environment:
+      - REDIS_HOSTS=local:nexus-redis:6379
+    ports:
+      - '8081:8081'
+    depends_on:
+      - nexus-redis
+
+volumes:
+  redis_data:
+    driver: local
