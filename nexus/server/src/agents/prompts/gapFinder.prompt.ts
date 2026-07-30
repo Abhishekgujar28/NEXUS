@@ -11,8 +11,8 @@ export interface InnovationGapOutput {
   title: string;
   description: string;
   category: 'feature' | 'technical' | 'cost' | 'ux' | 'integration' | 'scalability' | 'user' | 'research';
-  impact: 'low' | 'medium' | 'high' | 'critical';
-  difficulty: 'easy' | 'moderate' | 'hard' | 'extreme';
+  impact: 'low' | 'medium' | 'high';
+  difficulty: 'low' | 'medium' | 'high';
   opportunity: string;
   affectedSolutions: string[];
 }
@@ -32,8 +32,8 @@ You MUST respond strictly with valid JSON conforming to the following structure:
       "title": "Short gap title",
       "description": "Detailed explanation of what is missing or unserved",
       "category": "feature" | "technical" | "cost" | "ux" | "integration" | "scalability" | "user" | "research",
-      "impact": "low" | "medium" | "high" | "critical",
-      "difficulty": "easy" | "moderate" | "hard" | "extreme",
+      "impact": "low" | "medium" | "high",
+      "difficulty": "low" | "medium" | "high",
       "opportunity": "How this project can exploit this gap",
       "affectedSolutions": ["Solution A", "Solution B"]
     }

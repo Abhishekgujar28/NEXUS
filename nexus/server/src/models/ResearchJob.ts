@@ -22,6 +22,16 @@ const stageSchema = new mongoose.Schema(
     startedAt: Date,
     completedAt: Date,
     note: String,
+    durationMs: { type: Number, min: 0 },
+    retryCount: { type: Number, default: 0, min: 0 },
+    errors: { type: [String], default: [] },
+    warnings: { type: [String], default: [] },
+    tokenUsage: {
+      promptTokens: { type: Number, default: 0 },
+      completionTokens: { type: Number, default: 0 },
+      totalTokens: { type: Number, default: 0 },
+    },
+    estimatedCost: { type: Number, default: 0 },
   },
   { _id: false }
 );

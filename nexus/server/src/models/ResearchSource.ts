@@ -16,6 +16,7 @@ const researchSourceSchema = new mongoose.Schema(
     metadata: mongoose.Schema.Types.Mixed,
     relevanceScore: { type: Number, default: 0, min: 0, max: 1 },
     credibilityScore: { type: Number, default: 0, min: 0, max: 1 },
+    sourceHash: { type: String, index: true },
     retrievedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
@@ -23,5 +24,6 @@ const researchSourceSchema = new mongoose.Schema(
 
 researchSourceSchema.index({ projectId: 1, provider: 1 });
 researchSourceSchema.index({ projectId: 1, url: 1 });
+researchSourceSchema.index({ researchJobId: 1, sourceHash: 1 }, { unique: true, sparse: true });
 
 export default mongoose.model('ResearchSource', researchSourceSchema);

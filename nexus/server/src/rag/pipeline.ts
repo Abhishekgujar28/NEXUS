@@ -5,6 +5,8 @@ import { upsertChunks } from './chroma.client.js';
 import { retrieveAndRerank, RankedChunk } from './retriever.js';
 import { config } from '../core/config.js';
 import { logger } from '../core/logger.js';
+import { createHash } from 'node:crypto';
+import RagIndexState from '../models/RagIndexState.js';
 
 export interface Citation {
   index: number;
@@ -23,10 +25,10 @@ export interface RagContextResult {
  * Index all persisted ResearchSource documents for a project into the Vector Store.
  * Called automatically upon completion of the research pipeline.
  */
-export const indexResearchSources = async (projectId: string): Promise<number> => {
+export const indexResearchSources = async (projectId: string, researchJobId: string): Promise<number> => {
   logger.info(`Starting RAG indexing for project [${projectId}]`);
 
-  const sources = await ResearchSource.find({ projectId }).lean();
+  const sources = await ResearchSource.find({ projectId, researchJobId }).lean();
   if (sources.length === 0) {
     logger.info(`No ResearchSources found to index for project [${projectId}]`);
     return 0;
@@ -52,11 +54,25 @@ export const indexResearchSources = async (projectId: string): Promise<number> =
     return 0;
   }
 
-  // 2. Generate embeddings in batches
-  const embeddedChunks = await embedBatch(allChunks);
+  const embeddingModel = 'openai/text-embedding-3-small';
+  const candidates = [];
+  for (const chunk of allChunks) {
+    const chunkHash = createHash('sha256').update(chunk.text).digest('hex');
+    const state = await RagIndexState.findOneAndUpdate(
+      { projectId, chunkHash, embeddingModel },
+      { $setOnInsert: { researchJobId, projectId, sourceId: chunk.metadata.sourceId, sourceHash: createHash('sha256').update(`${chunk.metadata.url}|${chunk.metadata.title}`).digest('hex'), chunkHash, chunkId: chunk.id, embeddingModel, status: 'pending' } },
+      { upsert: true, new: true }
+    );
+    if (state.status !== 'completed') candidates.push({ chunk, state });
+  }
+  if (candidates.length === 0) return 0;
+
+  // 2. Generate provider-native embedding batches only for unseen chunks.
+  const embeddedChunks = await embedBatch(candidates.map(({ chunk }) => chunk));
 
   // 3. Upsert to Vector Store
   await upsertChunks(projectId, embeddedChunks);
+  await RagIndexState.updateMany({ _id: { $in: candidates.map(({ state }) => state._id) } }, { $set: { status: 'completed', completedAt: new Date() } });
 
   logger.info(`Successfully indexed ${embeddedChunks.length} chunks for project [${projectId}]`);
   return embeddedChunks.length;

@@ -148,6 +148,11 @@ export class OpenRouterProvider implements AIProvider {
   }
 
   async embed(text: string): Promise<number[]> {
+    const [embedding] = await this.embedBatch([text]);
+    return embedding;
+  }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
     // OpenRouter embeddings support via openai/text-embedding-3-small or fallback vector generator
     this.ensureKey();
     try {
@@ -155,7 +160,7 @@ export class OpenRouterProvider implements AIProvider {
         `${this.baseUrl}/embeddings`,
         {
           model: 'openai/text-embedding-3-small',
-          input: text,
+          input: texts,
         },
         {
           headers: {
@@ -166,10 +171,10 @@ export class OpenRouterProvider implements AIProvider {
         }
       );
 
-      return response.data?.data?.[0]?.embedding || new Array(768).fill(0);
+      return response.data?.data?.map((item: { embedding: number[] }) => item.embedding) || texts.map(() => new Array(768).fill(0));
     } catch (err) {
       logger.warn('[OpenRouter] Embedding failed, fallback to zero vector', { error: (err as Error).message });
-      return new Array(768).fill(0);
+      return texts.map(() => new Array(768).fill(0));
     }
   }
 }

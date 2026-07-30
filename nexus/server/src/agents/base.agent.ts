@@ -2,11 +2,14 @@ import { AIProvider, AIProviderError } from '../integrations/AIProvider.js';
 import { aiRouter } from '../integrations/AIRouter.js';
 import { AppError, ErrorCodes } from '../core/errors.js';
 import { logger } from '../core/logger.js';
+import { AIOutputContract, parseAIOutput } from '../ai-output/contracts.js';
 
 export abstract class BaseAgent<TInput, TOutput> {
   abstract readonly name: string;
   protected provider: AIProvider;
   protected taskCategory: string = 'research';
+  protected abstract readonly outputContract: AIOutputContract<TOutput>;
+  private outputWarnings: string[] = [];
 
   constructor(provider: AIProvider = aiRouter) {
     this.provider = provider;
@@ -27,6 +30,13 @@ export abstract class BaseAgent<TInput, TOutput> {
    */
   protected validateOutput(rawOutput: TOutput): TOutput {
     return rawOutput;
+  }
+
+  /** Warnings from normalization are recorded by the orchestrator on the stage. */
+  consumeOutputWarnings(): string[] {
+    const warnings = this.outputWarnings;
+    this.outputWarnings = [];
+    return warnings;
   }
 
   /**
@@ -51,13 +61,17 @@ export abstract class BaseAgent<TInput, TOutput> {
     logger.info(`Executing AI Agent: ${this.name} (TaskCategory: ${this.taskCategory})`);
 
     try {
-      const rawOutput = await this.provider.generateStructured<TOutput>(
+      // Models return text, never database-ready objects. Parsing, conservative
+      // JSON repair, normalization and Zod validation happen in one reusable
+      // boundary before an orchestrator can persist anything.
+      const rawOutput = await this.provider.generate(
         userPrompt,
         systemPrompt,
         { taskCategory: this.taskCategory }
       );
-
-      const validated = this.validateOutput(rawOutput);
+      const parsed = parseAIOutput(this.outputContract, rawOutput);
+      this.outputWarnings = parsed.warnings;
+      const validated = this.validateOutput(parsed.data);
       return validated;
     } catch (err) {
       logger.error(`Error in AI Agent [${this.name}]`, {

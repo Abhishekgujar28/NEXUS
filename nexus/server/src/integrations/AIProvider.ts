@@ -38,6 +38,7 @@ export interface AIProvider {
   generateStructured<T>(prompt: string, system?: string, options?: AIGenerateOptions): Promise<T>;
   stream?(prompt: string, system?: string, options?: AIGenerateOptions): AsyncIterable<string>;
   embed(text: string): Promise<number[]>;
+  embedBatch?(texts: string[]): Promise<number[][]>;
   healthCheck(): Promise<ProviderHealthStatus>;
   getModels(): string[];
 }

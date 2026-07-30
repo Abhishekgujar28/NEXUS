@@ -356,7 +356,7 @@ export class ResearchOrchestrator {
       logger.info(`ResearchOrchestrator completed successfully for job ${this.researchJobId}`);
 
       // Asynchronously trigger RAG vector indexing for retrieved research sources
-      indexResearchSources(this.projectId).catch((err) => {
+      indexResearchSources(this.projectId, this.researchJobId).catch((err) => {
         logger.warn(`RAG indexing failed for project [${this.projectId}]`, {
           error: (err as Error).message,
         });

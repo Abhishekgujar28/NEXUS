@@ -332,6 +332,16 @@ export class AIRouter implements AIProvider {
   async embed(text: string): Promise<number[]> {
     return this.routeOperation('embed', (provider) => provider.embed(text), text);
   }
+
+  async embedBatch(texts: string[]): Promise<number[][]> {
+    return this.routeOperation(
+      'embed',
+      (provider) => provider.embedBatch
+        ? provider.embedBatch(texts)
+        : Promise.all(texts.map((text) => provider.embed(text))),
+      texts.join('\n')
+    );
+  }
 }
 
 export const aiRouter = new AIRouter();

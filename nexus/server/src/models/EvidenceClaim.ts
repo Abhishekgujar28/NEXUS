@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const evidenceClaimSchema = new mongoose.Schema(
   {
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+    researchJobId: { type: mongoose.Schema.Types.ObjectId, ref: 'ResearchJob', required: true, index: true },
     claim: { type: String, required: true },
     supportingSourceIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ResearchSource' }],
     contradictingSourceIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ResearchSource' }],

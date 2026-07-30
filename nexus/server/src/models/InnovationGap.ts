@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const innovationGapSchema = new mongoose.Schema(
   {
     projectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Project', required: true, index: true },
+    researchJobId: { type: mongoose.Schema.Types.ObjectId, ref: 'ResearchJob', required: true, index: true },
     title: { type: String, required: true },
     description: String,
     opportunity: String,
