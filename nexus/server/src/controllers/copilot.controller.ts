@@ -41,6 +41,19 @@ export const chatWithCopilot = async (req: Request, res: Response): Promise<void
   });
 };
 
+export const listConversations = async (req: Request, res: Response): Promise<void> => {
+  const projectId = req.params.id;
+  await assertProjectExists(projectId);
+
+  res.json({
+    success: true,
+    data: {
+      projectId,
+      conversations: [],
+    },
+  });
+};
+
 export const getCopilotHistory = async (req: Request, res: Response): Promise<void> => {
   const projectId = req.params.id;
   await assertProjectExists(projectId);
