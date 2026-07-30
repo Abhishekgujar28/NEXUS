@@ -1,21 +1,30 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import {
-  LayoutDashboard,
+  Home,
+  Sparkles,
+  Library,
+  Activity,
   FolderPlus,
+  Search,
   Settings,
   LogOut,
-  Menu,
-  X,
-  Search,
   ChevronDown,
-  Users,
+  Pin,
+  Folder,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, truncate } from '@/lib/utils';
 import { useAuthStore } from '@/stores/auth';
+import { projectsService } from '@/lib/services';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { CommandMenu } from '@/components/CommandMenu';
+import { PageTransition } from '@/components/PageTransition';
+import { LiveDot } from '@/components/LiveDot';
+import { getPinnedProjects } from '@/components/PinButton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -23,131 +32,243 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import type { Project } from '@/types';
 
-const NAV_ITEMS = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/new', icon: FolderPlus, label: 'New Project' },
-  { to: '/team', icon: Users, label: 'Team & Activity' },
-  { to: '/settings', icon: Settings, label: 'Settings' },
+const MAIN_NAV = [
+  { to: '/app', icon: Home, label: 'Home', end: true },
+  { to: '/discoveries', icon: Sparkles, label: 'Discoveries' },
+  { to: '/library', icon: Library, label: 'Library' },
+  { to: '/team', icon: Activity, label: 'Activity' },
 ] as const;
 
-/**
- * AppLayout — the application shell.
- *
- * Narrow icon rail on the left (56px). Expands to a 224px sidebar when
- * toggled. Topbar has search and profile. Content area fills the rest.
- *
- * The rail keeps vertical scan-distance short while dedicating maximum
- * horizontal space to the research workspace.
- */
+function SidebarSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-3 pt-4 pb-1.5">
+      <span className="eyebrow">{children}</span>
+    </div>
+  );
+}
+
+function SidebarProjectLink({ project }: { project: Project }) {
+  const location = useLocation();
+  const path = `/projects/${project._id}`;
+  const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
+  const isResearching = project.status === 'researching';
+
+  return (
+    <NavLink
+      to={path}
+      className={cn(
+        'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors min-w-0',
+        isActive
+          ? 'bg-muted text-foreground font-medium'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+      )}
+    >
+      {isResearching ? (
+        <span className="relative flex h-2 w-2 shrink-0" aria-hidden>
+          <span className="absolute inline-flex h-full w-full animate-accent-pulse rounded-full bg-citrine-400/40" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-citrine-400" />
+        </span>
+      ) : (
+        <Folder className="h-3.5 w-3.5 shrink-0 opacity-60" />
+      )}
+      <span className="truncate">{truncate(project.title, 28)}</span>
+    </NavLink>
+  );
+}
+
+function SidebarPinnedLink({
+  projectId,
+  title,
+}: {
+  projectId: string;
+  title: string;
+}) {
+  const location = useLocation();
+  const path = `/projects/${projectId}`;
+  const isActive = location.pathname === path || location.pathname.startsWith(`${path}/`);
+
+  return (
+    <NavLink
+      to={path}
+      className={cn(
+        'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors min-w-0',
+        isActive
+          ? 'bg-muted text-foreground font-medium'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+      )}
+    >
+      <Pin className="h-3.5 w-3.5 shrink-0 text-citrine-400/80" />
+      <span className="truncate">{truncate(title, 28)}</span>
+    </NavLink>
+  );
+}
+
 export function AppLayout() {
-  const [expanded, setExpanded] = useState(false);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const navigate = useNavigate();
   const location = useLocation();
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => getPinnedProjects());
+
+  const syncPinned = useCallback(() => {
+    setPinnedIds(getPinnedProjects());
+  }, []);
+
+  useEffect(() => {
+    syncPinned();
+    window.addEventListener('nexus:pinned-changed', syncPinned);
+    window.addEventListener('storage', syncPinned);
+    return () => {
+      window.removeEventListener('nexus:pinned-changed', syncPinned);
+      window.removeEventListener('storage', syncPinned);
+    };
+  }, [syncPinned]);
+
+  const { data: projectsData } = useQuery({
+    queryKey: ['projects', 'sidebar'],
+    queryFn: () => projectsService.list({ limit: 40 }),
+    staleTime: 30_000,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      return items.some((p) => p.status === 'researching') ? 5000 : false;
+    },
+  });
+
+  const projects = projectsData?.items ?? [];
+
+  const sidebarProjects = useMemo(() => {
+    const researching = projects.filter((p) => p.status === 'researching');
+    const rest = projects.filter((p) => p.status !== 'researching');
+    const merged = [...researching, ...rest];
+    const seen = new Set<string>();
+    return merged.filter((p) => {
+      if (seen.has(p._id)) return false;
+      seen.add(p._id);
+      return true;
+    }).slice(0, 12);
+  }, [projects]);
+
+  const pinnedProjects = useMemo(
+    () =>
+      pinnedIds
+        .map((id) => {
+          const project = projects.find((p) => p._id === id);
+          return project ? { id, title: project.title } : null;
+        })
+        .filter((p): p is { id: string; title: string } => p !== null),
+    [pinnedIds, projects]
+  );
+
+  const hasActiveResearch = projects.some((p) => p.status === 'researching');
 
   const handleLogout = async () => {
     await logout();
     navigate('/login');
   };
 
+  const openCommandMenu = () => {
+    document.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true })
+    );
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          'flex flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out shrink-0',
-          expanded ? 'w-56' : 'w-14'
-        )}
-      >
-        {/* Logo */}
-        <div className="flex h-14 items-center justify-center border-b border-border px-3 shrink-0">
-          {expanded ? (
-            <span className="text-display text-lg tracking-display text-foreground">
-              NEXUS
-            </span>
-          ) : (
-            <span className="text-display text-lg tracking-display text-citrine-400">N</span>
-          )}
+      <aside className="flex w-60 min-h-0 shrink-0 flex-col border-r border-border bg-surface">
+        <div className="shrink-0 border-b border-border px-4 py-4">
+          <span className="text-display text-lg tracking-display text-foreground">NEXUS</span>
         </div>
 
-        {/* Nav items */}
-        <nav className="flex-1 py-2 space-y-0.5 px-2 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
-            const isActive = to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
-            const link = (
-              <NavLink
-                key={to}
-                to={to}
-                className={cn(
-                  'flex items-center gap-3 rounded-md px-2 h-9 text-sm transition-colors',
-                  isActive
-                    ? 'bg-muted text-foreground font-medium'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
-                )}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {expanded ? <span className="truncate">{label}</span> : null}
-              </NavLink>
-            );
-
-            if (!expanded) {
-              return (
-                <Tooltip key={to}>
-                  <TooltipTrigger asChild>{link}</TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              );
-            }
-            return link;
-          })}
-        </nav>
-
-        {/* Toggle */}
-        <div className="border-t border-border p-2">
-          <button
-            onClick={() => setExpanded((p) => !p)}
-            className="flex items-center justify-center w-full h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
-            aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+        <div className="shrink-0 space-y-2 border-b border-border p-3">
+          <Button
+            variant="primary"
+            size="md"
+            className="w-full justify-start"
+            onClick={() => navigate('/new')}
           >
-            {expanded ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-          </button>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Topbar */}
-        <header className="flex h-14 items-center justify-between border-b border-border px-4 shrink-0">
-          {/* Search — dispatches ⌘K to open CommandMenu */}
+            <FolderPlus className="h-4 w-4" />
+            New Research
+          </Button>
           <button
-            onClick={() =>
-              document.dispatchEvent(
-                new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true })
-              )
-            }
-            className="flex items-center gap-2 h-8 rounded-md border border-border bg-surface-raised px-3 text-sm text-muted-foreground hover:border-foreground/20 transition-colors max-w-xs w-64"
+            type="button"
+            onClick={openCommandMenu}
+            className="flex h-8 w-full items-center gap-2 rounded-md border border-border bg-surface-raised px-3 text-sm text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
             aria-label="Open command menu"
           >
-            <Search className="h-3.5 w-3.5" />
-            <span className="truncate">Search projects…</span>
-            <kbd className="ml-auto text-2xs bg-muted px-1.5 py-0.5 rounded border border-border font-mono">
+            <Search className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Search…</span>
+            <kbd className="ml-auto text-2xs rounded border border-border bg-muted px-1.5 py-0.5 font-mono">
               ⌘K
             </kbd>
           </button>
+        </div>
 
-          {/* Profile */}
+        <ScrollArea className="min-h-0 flex-1">
+          <nav className="space-y-0.5 px-2 py-2">
+            {MAIN_NAV.map(({ to, icon: Icon, label, ...rest }) => {
+              const end = 'end' in rest ? rest.end : false;
+              return (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={end}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                      isActive
+                        ? 'bg-muted text-foreground font-medium'
+                        : 'text-muted-foreground hover:bg-muted/60 hover:text-foreground'
+                    )
+                  }
+                >
+                  <Icon className="h-4 w-4 shrink-0" />
+                  {label}
+                </NavLink>
+              );
+            })}
+          </nav>
+
+          {sidebarProjects.length > 0 ? (
+            <div className="px-2 pb-2">
+              <SidebarSectionLabel>
+                <span className="flex items-center gap-2">
+                  Projects
+                  {hasActiveResearch ? <LiveDot pulse label="" className="scale-90" /> : null}
+                </span>
+              </SidebarSectionLabel>
+              <div className="space-y-0.5">
+                {sidebarProjects.map((project) => (
+                  <SidebarProjectLink key={project._id} project={project} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {pinnedProjects.length > 0 ? (
+            <div className="px-2 pb-2">
+              <SidebarSectionLabel>Pinned</SidebarSectionLabel>
+              <div className="space-y-0.5">
+                {pinnedProjects.map(({ id, title }) => (
+                  <SidebarPinnedLink key={id} projectId={id} title={title} />
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </ScrollArea>
+
+        <div className="shrink-0 border-t border-border p-2">
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-muted transition-colors">
-                <Avatar name={user?.name} src={user?.avatar} size={28} />
-                <span className="text-sm text-foreground hidden sm:inline">{user?.name}</span>
-                <ChevronDown className="h-3 w-3 text-muted-foreground" />
-              </button>
+            <DropdownMenuTrigger className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-muted">
+              <Avatar name={user?.name} src={user?.avatar} size={28} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-foreground">{user?.name}</p>
+                <p className="truncate text-xs text-muted-foreground">Settings</p>
+              </div>
+              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="start" side="top" className="w-56">
               <div className="px-2.5 py-2">
                 <p className="text-sm font-medium text-foreground">{user?.name}</p>
                 <p className="text-xs text-muted-foreground">{user?.email}</p>
@@ -164,15 +285,17 @@ export function AppLayout() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </header>
+        </div>
+      </aside>
 
-        {/* Content */}
-        <main className="flex-1 overflow-y-auto scrollbar-thin">
-          <Outlet />
-        </main>
-      </div>
+      <main className="min-h-0 flex-1 overflow-y-auto scrollbar-thin">
+        <AnimatePresence mode="wait" initial={false}>
+          <PageTransition key={location.pathname} className="min-h-full">
+            <Outlet />
+          </PageTransition>
+        </AnimatePresence>
+      </main>
 
-      {/* Command palette (⌘K) */}
       <CommandMenu />
     </div>
   );

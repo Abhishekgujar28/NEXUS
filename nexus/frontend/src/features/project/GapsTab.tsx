@@ -49,11 +49,9 @@ function GapCard({ gap }: { gap: InnovationGap }) {
         {impactBadge(gap.impact)}
         {difficultyBadge(gap.difficulty)}
         <Tooltip>
-          <TooltipTrigger asChild>
-            <span className="flex items-center gap-1 text-xs text-muted-foreground cursor-default">
-              {pct(gap.confidence)} confidence
-              <Info className="h-3 w-3" />
-            </span>
+          <TooltipTrigger className="flex items-center gap-1 text-xs text-muted-foreground cursor-default">
+            {pct(gap.confidence)} confidence
+            <Info className="h-3 w-3" />
           </TooltipTrigger>
           <TooltipContent>AI-estimated confidence in this gap's existence and opportunity size.</TooltipContent>
         </Tooltip>

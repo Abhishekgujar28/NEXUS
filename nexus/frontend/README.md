@@ -146,3 +146,7 @@ Tokens are exchanged in JSON bodies (not cookies) and cached in `localStorage` u
 - Path alias `@/*` → `src/*` is configured in both `tsconfig.json` and `vite.config.ts`.
 - `strict: true` is on. Prefer explicit types on cross-file boundaries and let inference do the rest.
 - Do not introduce new global stores casually — most page-level state belongs in React Query or component state.
+
+
+<!-- /
+this too better when iuse antigravity claude opus 4.6 so the how main thing is the there some chnages in the landing page like the it took middle part andside is clean that looks  weied so fix that width and then in hero section looks great just that background balls animated looks spreading and running like that and then other loooks fine just it looks minimal but itlooks very empty so add some efforts to looks heavy and looks animated and the showing workspecaes and images looks great ajust nned some  primum animation so the chnage this only how the main part is the now is  -->

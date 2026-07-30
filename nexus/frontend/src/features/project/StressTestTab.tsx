@@ -157,7 +157,7 @@ export function StressTestTab({ projectId }: { projectId: ID }) {
                     <span className="text-2xs uppercase tracking-widest text-muted-foreground font-medium flex items-center gap-1">
                       Evidence
                       <Tooltip>
-                        <TooltipTrigger asChild>
+                        <TooltipTrigger>
                           <Info className="h-3 w-3" />
                         </TooltipTrigger>
                         <TooltipContent>

@@ -33,13 +33,11 @@ function EvidenceCard({ claim }: { claim: EvidenceClaim }) {
       {/* Scores */}
       <div className="flex items-center gap-4 mt-4 flex-wrap">
         <Tooltip>
-          <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5">
-              <Badge tone={confidenceTone(claim.confidence)} size="sm">
-                {pct(claim.confidence)} confidence
-              </Badge>
-              <Info className="h-3 w-3 text-muted-foreground" />
-            </div>
+          <TooltipTrigger className="flex items-center gap-1.5">
+            <Badge tone={confidenceTone(claim.confidence)} size="sm">
+              {pct(claim.confidence)} confidence
+            </Badge>
+            <Info className="h-3 w-3 text-muted-foreground" />
           </TooltipTrigger>
           <TooltipContent>
             <p className="max-w-xs">

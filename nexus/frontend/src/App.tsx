@@ -13,6 +13,7 @@ import { NewProjectPage } from '@/pages/NewProjectPage';
 import { ProjectPage } from '@/pages/ProjectPage';
 import { TeamActivityPage } from '@/pages/TeamActivityPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import LandingPage from '@/pages/LandingPage';
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -35,7 +36,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function GuestRoute({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
-  if (status === 'authed') return <Navigate to="/" replace />;
+  if (status === 'idle' || status === 'loading') {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <span className="inline-block h-5 w-5 rounded-full border-2 border-citrine-400/50 border-t-citrine-400 animate-spin" />
+      </div>
+    );
+  }
+  if (status === 'authed') return <Navigate to="/app" replace />;
   return <>{children}</>;
 }
 
@@ -51,6 +59,8 @@ export default function App() {
       <TooltipProvider delayDuration={300}>
         <BrowserRouter>
           <Routes>
+                  <Route path="/" element={<LandingPage />} />
+
             {/* Auth routes */}
             <Route
               element={
@@ -71,7 +81,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<DashboardPage />} />
+              <Route path="/app" element={<DashboardPage />} />
               <Route path="/new" element={<NewProjectPage />} />
               <Route path="/projects/:projectId/*" element={<ProjectPage />} />
               <Route path="/team" element={<TeamActivityPage />} />

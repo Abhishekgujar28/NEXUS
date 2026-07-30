@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
@@ -49,15 +48,13 @@ const buttonStyles = cva(
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonStyles> {
-  asChild?: boolean;
   loading?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild, loading, children, disabled, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button';
+  ({ className, variant, size, loading, children, disabled, ...props }, ref) => {
     return (
-      <Comp
+      <button
         ref={ref}
         className={cn(buttonStyles({ variant, size }), className)}
         disabled={disabled || loading}
@@ -66,11 +63,11 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         {loading ? (
           <span
             aria-hidden
-            className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current/30 border-t-current animate-spin"
+            className="inline-block h-3.5 w-3.5 rounded-full border-2 border-current/30 border-t-current animate-spin mr-2"
           />
         ) : null}
         {children}
-      </Comp>
+      </button>
     );
   }
 );

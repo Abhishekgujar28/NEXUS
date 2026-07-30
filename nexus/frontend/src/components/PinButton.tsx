@@ -62,21 +62,18 @@ export function PinButton({
 
   return (
     <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={handleClick}
-          aria-pressed={pinned}
-          aria-label={pinned ? 'Unpin project' : 'Pin project'}
-          className={cn(
-            'inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
-            size === 'sm' ? 'h-7 w-7' : 'h-8 w-8',
-            pinned && 'text-citrine-400 hover:text-citrine-300',
-            className
-          )}
-        >
-          <Pin className={cn(iconSize, pinned && 'fill-current')} />
-        </button>
+      <TooltipTrigger
+        onClick={handleClick}
+        aria-pressed={pinned}
+        aria-label={pinned ? 'Unpin project' : 'Pin project'}
+        className={cn(
+          'inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground',
+          size === 'sm' ? 'h-7 w-7' : 'h-8 w-8',
+          pinned && 'text-citrine-400 hover:text-citrine-300',
+          className
+        )}
+      >
+        <Pin className={cn(iconSize, pinned && 'fill-current')} />
       </TooltipTrigger>
       <TooltipContent side="bottom">{pinned ? 'Unpin' : 'Pin to sidebar'}</TooltipContent>
     </Tooltip>
