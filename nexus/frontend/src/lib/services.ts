@@ -102,16 +102,16 @@ export const researchService = {
 /* -------- Copilot -------- */
 export const copilotService = {
   chat: (projectId: ID, message: string, conversationId?: string) =>
-    unwrap<{ conversationId: string; answer: string }>(
-      api.post<ApiEnvelope<{ conversationId: string; answer: string }>>(
+    unwrap<{ conversationId: string; answer: string; citations: Array<{ index: number; title: string; url: string; sourceType: string }> }>(
+      api.post<ApiEnvelope<{ conversationId: string; answer: string; citations: Array<{ index: number; title: string; url: string; sourceType: string }> }>>(
         `/copilot/${projectId}/chat`,
         { message, conversationId }
       )
     ),
-  history: (projectId: ID) =>
-    unwrap<{ projectId: ID; items: CopilotMessage[] }>(
-      api.get<ApiEnvelope<{ projectId: ID; items: CopilotMessage[] }>>(
-        `/copilot/${projectId}/history`
+  history: (projectId: ID, conversationId?: ID) =>
+    unwrap<{ projectId: ID; conversationId: ID | null; messages: CopilotMessage[] }>(
+      api.get<ApiEnvelope<{ projectId: ID; conversationId: ID | null; messages: CopilotMessage[] }>>(
+        `/copilot/${projectId}/history`, { params: conversationId ? { conversationId } : undefined }
       )
     ),
 };

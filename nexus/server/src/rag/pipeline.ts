@@ -39,6 +39,7 @@ export const indexResearchSources = async (projectId: string, researchJobId: str
     chunkSource({
       _id: src._id.toString(),
       projectId: src.projectId.toString(),
+      sourceHash: src.sourceHash,
       sourceType: src.sourceType,
       title: src.title,
       url: src.url || '',
@@ -58,9 +59,10 @@ export const indexResearchSources = async (projectId: string, researchJobId: str
   const candidates = [];
   for (const chunk of allChunks) {
     const chunkHash = createHash('sha256').update(chunk.text).digest('hex');
+    const sourceHash = chunk.metadata.sourceHash || createHash('sha256').update(`${chunk.metadata.url}|${chunk.metadata.title}`).digest('hex');
     const state = await RagIndexState.findOneAndUpdate(
       { projectId, chunkHash, embeddingModel },
-      { $setOnInsert: { researchJobId, projectId, sourceId: chunk.metadata.sourceId, sourceHash: createHash('sha256').update(`${chunk.metadata.url}|${chunk.metadata.title}`).digest('hex'), chunkHash, chunkId: chunk.id, embeddingModel, status: 'pending' } },
+      { $setOnInsert: { researchJobId, projectId, sourceId: chunk.metadata.sourceId, sourceHash, chunkHash, chunkId: chunk.id, embeddingModel, status: 'pending' } },
       { upsert: true, new: true }
     );
     if (state.status !== 'completed') candidates.push({ chunk, state });

@@ -3,6 +3,7 @@ import { config } from '../core/config.js';
 export interface ChunkMetadata {
   projectId: string;
   sourceId: string;
+  sourceHash?: string;
   chunkIndex: number;
   sourceType: string;
   title: string;
@@ -20,6 +21,7 @@ export interface ChunkData {
 export interface SourceInput {
   _id: string;
   projectId: string;
+  sourceHash?: string;
   sourceType: string;
   title: string;
   url: string;
@@ -73,6 +75,7 @@ export const chunkSource = (source: SourceInput): ChunkData[] => {
         metadata: {
           projectId: source.projectId.toString(),
           sourceId: source._id.toString(),
+          sourceHash: source.sourceHash,
           chunkIndex,
           sourceType: source.sourceType,
           title: source.title,

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuthStore } from '@/stores/auth';
@@ -9,6 +9,8 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { DiscoveriesPage } from '@/pages/DiscoveriesPage';
+import { LibraryPage } from '@/pages/LibraryPage';
 import { NewProjectPage } from '@/pages/NewProjectPage';
 import { ProjectPage } from '@/pages/ProjectPage';
 import { TeamActivityPage } from '@/pages/TeamActivityPage';
@@ -23,6 +25,7 @@ const qc = new QueryClient({
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const status = useAuthStore((s) => s.status);
+  const location = useLocation();
   if (status === 'idle' || status === 'loading') {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -30,7 +33,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (status === 'guest') return <Navigate to="/login" replace />;
+  if (status === 'guest') return <Navigate to="/login" state={{ from: location }} replace />;
   return <>{children}</>;
 }
 
@@ -59,7 +62,7 @@ export default function App() {
       <TooltipProvider delayDuration={300}>
         <BrowserRouter>
           <Routes>
-                  <Route path="/" element={<LandingPage />} />
+            <Route path="/" element={<LandingPage />} />
 
             {/* Auth routes */}
             <Route
@@ -82,6 +85,8 @@ export default function App() {
               }
             >
               <Route path="/app" element={<DashboardPage />} />
+              <Route path="/discoveries" element={<DiscoveriesPage />} />
+              <Route path="/library" element={<LibraryPage />} />
               <Route path="/new" element={<NewProjectPage />} />
               <Route path="/projects/:projectId/*" element={<ProjectPage />} />
               <Route path="/team" element={<TeamActivityPage />} />

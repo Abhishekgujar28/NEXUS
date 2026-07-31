@@ -15,7 +15,7 @@ import {
 } from '../controllers/research.controller.js';
 import { verifyAuth } from '../middleware/auth.middleware.js';
 import { projectAuth } from '../middleware/projectAuth.js';
-import { researchLimiter } from '../middleware/rateLimit.middleware.js';
+import { researchMutationLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
 import {
   previewResearchSchema,
@@ -26,12 +26,12 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 
 const router = Router({ mergeParams: true });
 
-router.use(verifyAuth, projectAuth('viewer'), researchLimiter);
+router.use(verifyAuth, projectAuth('viewer'));
 
-// Mutations require at least editor; read endpoints only need viewer.
-router.post('/start', projectAuth('editor'), validate(startResearchSchema), asyncHandler(startResearch));
-router.post('/preview', projectAuth('editor'), validate(previewResearchSchema), asyncHandler(previewResearchSources));
-router.post('/test-agent', projectAuth('editor'), validate(testAgentSchema), asyncHandler(testAgent));
+// Mutations require at least editor & rate limiting; read endpoints only need viewer.
+router.post('/start', projectAuth('editor'), researchMutationLimiter, validate(startResearchSchema), asyncHandler(startResearch));
+router.post('/preview', projectAuth('editor'), researchMutationLimiter, validate(previewResearchSchema), asyncHandler(previewResearchSources));
+router.post('/test-agent', projectAuth('editor'), researchMutationLimiter, validate(testAgentSchema), asyncHandler(testAgent));
 router.get('/job', asyncHandler(getResearchJob));
 router.get('/sources', asyncHandler(getResearchSources));
 router.get('/evidence', asyncHandler(getEvidence));
@@ -40,6 +40,6 @@ router.get('/gaps', asyncHandler(getGaps));
 router.get('/architecture', asyncHandler(getArchitecture));
 router.get('/resources', asyncHandler(getResources));
 router.get('/roadmap', asyncHandler(getRoadmap));
-router.post('/stresstest', projectAuth('editor'), asyncHandler(stressTestResearch));
+router.post('/stresstest', projectAuth('editor'), researchMutationLimiter, asyncHandler(stressTestResearch));
 
 export default router;

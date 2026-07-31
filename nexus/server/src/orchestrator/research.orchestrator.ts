@@ -1,4 +1,5 @@
 import { AIProviderError } from '../integrations/AIProvider.js';
+import { createHash } from 'node:crypto';
 import Project from '../models/Project.js';
 import ResearchJob, { RESEARCH_STAGES } from '../models/ResearchJob.js';
 import ResearchSource from '../models/ResearchSource.js';
@@ -25,6 +26,18 @@ import {
 import { indexResearchSources } from '../rag/pipeline.js';
 
 type JobDoc = InstanceType<typeof ResearchJob>;
+
+/** A stable identity for one provider result within a research job. */
+const sourceHash = (source: NormalizedSource): string => {
+  const canonical = [
+    source.provider,
+    source.sourceType,
+    source.url ?? '',
+    source.title ?? '',
+    source.content ?? source.snippet ?? '',
+  ].map((value) => value.trim().replace(/\s+/g, ' ').toLowerCase()).join('\n');
+  return createHash('sha256').update(canonical).digest('hex');
+};
 
 /**
  * Progress mapping per pipeline stage key (0 - 100).
@@ -158,11 +171,20 @@ export class ResearchOrchestrator {
       const deepSearch = new DeepSearchAgent();
       const { sources } = await deepSearch.execute({ queries });
 
+      const uniqueSources = new Map<string, NormalizedSource>();
       if (sources.length > 0) {
-        await ResearchSource.insertMany(
-          sources.map((s: NormalizedSource) => ({
+        // Provider output is already de-duplicated, but preserve the database
+        // boundary as idempotent too: BullMQ retries must never insert a second
+        // copy of the same source for the same job.
+        for (const source of sources) uniqueSources.set(sourceHash(source), source);
+        await ResearchSource.bulkWrite(
+          [...uniqueSources.entries()].map(([hash, s]) => ({
+            updateOne: {
+              filter: { researchJobId: this.researchJobId, sourceHash: hash },
+              update: { $set: {
             projectId: this.projectId,
             researchJobId: this.researchJobId,
+            sourceHash: hash,
             provider: s.provider,
             sourceType: s.sourceType,
             title: s.title,
@@ -175,14 +197,17 @@ export class ResearchOrchestrator {
             metadata: s.metadata,
             relevanceScore: s.relevanceScore,
             credibilityScore: s.credibilityScore,
-          }))
+              } },
+              upsert: true,
+            },
+          })) as any
         );
       }
 
       this.setStage(job, 'search_web', 'completed');
       this.setStage(job, 'search_papers', 'completed');
       this.setStage(job, 'search_github', 'completed');
-      job.sourceCount = sources.length;
+      job.sourceCount = uniqueSources.size;
       await job.save();
 
       // Stage 6 & 7: Analyze Research & Extract Existing Solutions
@@ -199,6 +224,7 @@ export class ResearchOrchestrator {
       });
 
       if (claims.length > 0) {
+        await EvidenceClaim.deleteMany({ researchJobId: this.researchJobId });
         await EvidenceClaim.insertMany(
           claims.map((c) => ({
             projectId: this.projectId,
@@ -213,6 +239,7 @@ export class ResearchOrchestrator {
       }
 
       if (solutions.length > 0) {
+        await ExistingSolution.deleteMany({ researchJobId: this.researchJobId });
         await ExistingSolution.insertMany(
           solutions.map((s) => ({
             projectId: this.projectId,
@@ -248,6 +275,7 @@ export class ResearchOrchestrator {
       });
 
       if (gaps.length > 0) {
+        await InnovationGap.deleteMany({ researchJobId: this.researchJobId });
         await InnovationGap.insertMany(
           gaps.map((g) => ({
             projectId: this.projectId,

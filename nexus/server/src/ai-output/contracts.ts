@@ -36,7 +36,13 @@ export const parseJsonOutput = (value: unknown): unknown => {
     return JSON.parse(candidate);
   } catch {
     // Only repair trailing commas. Do not guess missing fields or semantics.
-    return JSON.parse(candidate.replace(/,\s*([}\]])/g, '$1'));
+    // LLMs occasionally emit a literal backslash (for example in paths or
+    // quoted source text). Preserve its meaning by escaping only backslashes
+    // that are not legal JSON escape prefixes, then remove trailing commas.
+    const repaired = candidate
+      .replace(/\\(?!["\\/bfnrtu])/g, '\\\\')
+      .replace(/,\s*([}\]])/g, '$1');
+    return JSON.parse(repaired);
   }
 };
 
@@ -111,13 +117,40 @@ export const queryPlannerContract: AIOutputContract<{ queries: Array<{ query: st
   },
 };
 
+export const normalizeUrl = (value: unknown): string | undefined => {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || /^(n\/?a|none|null|undefined)$/i.test(trimmed)) return undefined;
+  try {
+    const parsed = new URL(trimmed);
+    return ['http:', 'https:'].includes(parsed.protocol) ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export const researchAnalysisContract: AIOutputContract<{ claims: Array<{ claim: string; supportingSources: string[]; contradictingSources: string[]; confidence: number; category: string }>; solutions: Array<{ name: string; url?: string; description: string; category: string; features: string[]; strengths: string[]; limitations: string[]; pricingModel?: string; relevanceScore: number }> }> = {
   name: 'ResearchAnalysisAgent',
   schema: z.object({
     claims: z.array(z.object({ claim: z.string().trim().min(1), supportingSources: stringArray, contradictingSources: stringArray, confidence: score, category: z.string().trim().min(1) })),
-    solutions: z.array(z.object({ name: z.string().trim().min(1), url: z.string().url().optional(), description: z.string().trim().min(1), category: z.string().trim().min(1), features: stringArray, strengths: stringArray, limitations: stringArray, pricingModel: z.string().trim().min(1).optional(), relevanceScore: score })),
+    solutions: z.array(z.object({ name: z.string().trim().min(1), url: z.string().optional(), description: z.string().trim().min(1), category: z.string().trim().min(1), features: stringArray, strengths: stringArray, limitations: stringArray, pricingModel: z.string().trim().min(1).optional(), relevanceScore: score })),
   }),
-  normalize: noOp,
+  normalize: (value, warnings) => {
+    const input = object(value);
+    return {
+      ...input,
+      solutions: mapArray(input.solutions, (solution) => {
+        const cleanUrl = normalizeUrl(solution.url);
+        if (solution.url && !cleanUrl) {
+          warnings.push(`solutions.url: invalid URL "${String(solution.url)}" normalized to undefined`);
+        }
+        return {
+          ...solution,
+          url: cleanUrl,
+        };
+      }),
+    };
+  },
 };
 
 const gapCategories = ['feature', 'technical', 'cost', 'ux', 'integration', 'scalability', 'user', 'research'] as const;

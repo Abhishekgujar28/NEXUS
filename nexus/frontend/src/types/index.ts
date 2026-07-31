@@ -236,12 +236,11 @@ export interface InnovationGap {
 }
 
 export interface CopilotMessage {
-  id: string;
+  _id: string;
   role: 'user' | 'assistant';
   content: string;
-  timestamp: string;
-  sourceIds?: ID[];
-  streaming?: boolean;
+  createdAt: string;
+  citations?: Array<{ index: number; title: string; url: string; sourceType: string }>;
 }
 
 export interface ApiEnvelope<T> {

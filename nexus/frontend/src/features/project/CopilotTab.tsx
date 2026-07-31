@@ -1,61 +1,36 @@
 import { useState, useRef, useEffect, type FormEvent } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Bot, User, Sparkles, BookOpen } from 'lucide-react';
 import { copilotService } from '@/lib/services';
 import { apiErrorMessage } from '@/lib/api';
-import type { Project, CopilotMessage } from '@/types';
+import type { Project } from '@/types';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-const SUGGESTED = [
-  'Summarize the key findings from the research',
-  'What are the biggest risks in this project?',
-  'Explain the recommended architecture',
-  'What should I build first?',
-  'Compare the existing solutions',
-];
-
 export function CopilotTab({ project }: { project: Project }) {
-  const [messages, setMessages] = useState<CopilotMessage[]>([]);
   const [input, setInput] = useState('');
   const [conversationId, setConversationId] = useState<string | undefined>();
+  const qc = useQueryClient();
   const endRef = useRef<HTMLDivElement>(null);
+
+  const { data: historyData } = useQuery({
+    queryKey: ['copilot-history', project._id],
+    queryFn: () => copilotService.history(project._id, conversationId),
+  });
+  const messages = historyData?.messages ?? [];
 
   const scrollToEnd = () => endRef.current?.scrollIntoView({ behavior: 'smooth' });
   useEffect(scrollToEnd, [messages]);
 
   const send = useMutation({
     mutationFn: (msg: string) => copilotService.chat(project._id, msg, conversationId),
-    onMutate: (msg) => {
-      const userMsg: CopilotMessage = {
-        id: `u-${Date.now()}`,
-        role: 'user',
-        content: msg,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, userMsg]);
-      setInput('');
-    },
     onSuccess: (data) => {
       setConversationId(data.conversationId);
-      const assistantMsg: CopilotMessage = {
-        id: `a-${Date.now()}`,
-        role: 'assistant',
-        content: data.answer,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMsg]);
+      setInput('');
+      qc.invalidateQueries({ queryKey: ['copilot-history', project._id] });
     },
-    onError: (err) => {
-      const errorMsg: CopilotMessage = {
-        id: `e-${Date.now()}`,
-        role: 'assistant',
-        content: `Sorry, something went wrong: ${apiErrorMessage(err)}`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, errorMsg]);
-    },
+    onError: (err) => console.error(apiErrorMessage(err)),
   });
 
   const submit = (e: FormEvent) => {
@@ -88,25 +63,12 @@ export function CopilotTab({ project }: { project: Project }) {
               and architecture to give grounded answers.
             </p>
 
-            {/* Suggested questions */}
-            <div className="flex flex-wrap justify-center gap-2 max-w-lg">
-              {SUGGESTED.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => send.mutate(q)}
-                  disabled={send.isPending}
-                  className="px-3 py-1.5 text-xs border border-border rounded-md text-muted-foreground hover:text-foreground hover:border-foreground/20 transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
           <div className="space-y-4 px-1">
             {messages.map((msg) => (
               <div
-                key={msg.id}
+                key={msg._id}
                 className={cn(
                   'flex gap-3',
                   msg.role === 'user' ? 'justify-end' : 'justify-start'

@@ -37,6 +37,7 @@ import { ResourcesTab } from '@/features/project/ResourcesTab';
 import { RoadmapTab } from '@/features/project/RoadmapTab';
 import { CopilotTab } from '@/features/project/CopilotTab';
 import { BuildModeTab } from '@/features/project/BuildModeTab';
+import { useResearchSocket } from '@/hooks/useResearchSocket';
 
 const TABS = [
   { key: '', label: 'Overview', icon: BookOpen },
@@ -61,6 +62,8 @@ export function ProjectPage() {
 
   const basePath = `/projects/${projectId}`;
   const activeTab = location.pathname.replace(basePath, '').replace(/^\//, '') || '';
+
+  useResearchSocket(projectId);
 
   const { data: project, isLoading } = useQuery({
     queryKey: ['project', projectId],

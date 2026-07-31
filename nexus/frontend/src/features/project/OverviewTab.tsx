@@ -1,8 +1,10 @@
+import { useQuery } from '@tanstack/react-query';
 import { BookOpen, FolderOpen, Scale, Lightbulb, ShieldAlert, Clock } from 'lucide-react';
 import type { Project, ProjectStats } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { pct, timeAgo } from '@/lib/utils';
+import { researchService } from '@/lib/services';
 
 function StatCard({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon: React.ElementType }) {
   return (
@@ -21,12 +23,17 @@ function StatCard({ label, value, icon: Icon }: { label: string; value: React.Re
 export function OverviewTab({ project, stats }: { project: Project; stats: ProjectStats | null }) {
   const pu = project.problemUnderstanding;
 
+  const { data: evidenceItems } = useQuery({
+    queryKey: ['evidence', project._id],
+    queryFn: () => researchService.evidence(project._id),
+  });
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Stats grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <StatCard label="Sources" value={stats?.sourceCount ?? '—'} icon={FolderOpen} />
-        <StatCard label="Evidence" value={stats?.solutionCount ?? '—'} icon={Scale} />
+        <StatCard label="Evidence" value={evidenceItems ? evidenceItems.length : '—'} icon={Scale} />
         <StatCard label="Solutions" value={stats?.solutionCount ?? '—'} icon={Lightbulb} />
         <StatCard label="Gaps" value={stats?.gapCount ?? '—'} icon={ShieldAlert} />
       </div>

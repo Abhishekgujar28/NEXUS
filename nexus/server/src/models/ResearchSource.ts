@@ -16,7 +16,7 @@ const researchSourceSchema = new mongoose.Schema(
     metadata: mongoose.Schema.Types.Mixed,
     relevanceScore: { type: Number, default: 0, min: 0, max: 1 },
     credibilityScore: { type: Number, default: 0, min: 0, max: 1 },
-    sourceHash: { type: String, index: true },
+    sourceHash: { type: String, required: true, index: true },
     retrievedAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

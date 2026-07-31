@@ -15,6 +15,7 @@ const innovationGapSchema = new mongoose.Schema(
     impact: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
     difficulty: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
     confidence: { type: Number, default: 0, min: 0, max: 1 },
+    affectedSolutions: [String],
     evidenceSourceIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ResearchSource' }],
   },
   { timestamps: true }

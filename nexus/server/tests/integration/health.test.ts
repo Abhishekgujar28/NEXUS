@@ -28,7 +28,10 @@ describe('Health API Integration Tests', () => {
         return this;
       },
       setHeader(k: string, v: string) {
-        this.headers[k] = v;
+        this.headers[k.toLowerCase()] = v;
+      },
+      getHeader(k: string) {
+        return this.headers[k.toLowerCase()];
       },
     };
 

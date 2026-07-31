@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input, Label, FieldError } from '@/components/ui/input';
@@ -9,6 +9,9 @@ import { apiErrorMessage } from '@/lib/api';
 export function LoginPage() {
   const login = useAuthStore((s) => s.login);
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/';
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +24,7 @@ export function LoginPage() {
     try {
       await login(email, password);
       toast.success('Welcome back');
-      navigate('/');
+      navigate(from, { replace: true });
     } catch (err) {
       setError(apiErrorMessage(err));
     } finally {
