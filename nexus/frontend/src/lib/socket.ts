@@ -14,10 +14,20 @@ export function getSocket(): Socket {
   if (socket) return socket;
   const { accessToken } = loadTokens();
   socket = io(SOCKET_URL || window.location.origin, {
-    autoConnect: true,
+    autoConnect: Boolean(accessToken),
     transports: ['websocket', 'polling'],
     auth: { token: accessToken },
     withCredentials: true,
+  });
+
+  socket.on('connect_error', (err) => {
+    if (
+      err.message === 'Authentication required' ||
+      err.message === 'Invalid or expired authentication token' ||
+      err.message === 'User not found'
+    ) {
+      socket?.disconnect();
+    }
   });
 
   socket.on('connect', () => {

@@ -1,4 +1,5 @@
 import { config } from '../../core/config.js';
+import { logger } from '../../core/logger.js';
 import { safeFetch } from '../../utils/safeFetch.js';
 import type { NormalizedSource, ResearchProvider } from './ResearchProvider.js';
 
@@ -35,20 +36,56 @@ export class SemanticScholarProvider implements ResearchProvider {
    * Errors propagate to the registry, which owns retry / timeout / isolation.
    */
   async search(query: string): Promise<NormalizedSource[]> {
-    const headers: Record<string, string> = {};
+    const startTime = Date.now();
+    const headers: Record<string, string> = { 'User-Agent': 'NEXUS-Engine' };
     if (config.semanticScholarApiKey) headers['x-api-key'] = config.semanticScholarApiKey;
+    let authUsed = !!config.semanticScholarApiKey;
 
-    const { data } = await safeFetch(SEARCH_URL, {
-      method: 'GET',
-      params: {
-        query,
-        limit: config.research.maxSourcesPerProvider,
-        fields: 'title,authors,year,abstract,url,citationCount,externalIds',
-      },
-      headers,
+    let response: any;
+    try {
+      response = await safeFetch(SEARCH_URL, {
+        method: 'GET',
+        params: {
+          query,
+          limit: config.research.maxSourcesPerProvider,
+          fields: 'title,authors,year,abstract,url,citationCount,externalIds',
+        },
+        headers,
+      });
+    } catch (err: any) {
+      if (authUsed && err?.response?.status === 403) {
+        logger.warn('Semantic Scholar key rejected (403) — falling back to unauthenticated public API', { query });
+        authUsed = false;
+        delete headers['x-api-key'];
+        response = await safeFetch(SEARCH_URL, {
+          method: 'GET',
+          params: {
+            query,
+            limit: config.research.maxSourcesPerProvider,
+            fields: 'title,authors,year,abstract,url,citationCount,externalIds',
+          },
+          headers,
+        });
+      } else {
+        logger.error(`Semantic Scholar provider request failed [${err?.response?.status || 'ERR'}]: ${err?.message}`, {
+          endpoint: SEARCH_URL,
+          authUsed,
+          latencyMs: Date.now() - startTime,
+        });
+        throw err;
+      }
+    }
+
+    const latencyMs = Date.now() - startTime;
+    const papers: SemanticScholarPaper[] = response?.data?.data ?? [];
+
+    logger.info(`Semantic Scholar provider succeeded`, {
+      endpoint: SEARCH_URL,
+      authStatus: authUsed ? 'authenticated' : 'unauthenticated',
+      statusCode: response?.status,
+      latencyMs,
+      retrievedCount: papers.length,
     });
-
-    const papers: SemanticScholarPaper[] = data?.data ?? [];
 
     return papers
       .filter((p) => p.title)

@@ -184,7 +184,7 @@ const bootstrap = async (): Promise<void> => {
 
   logger.info(
     `Research worker started (queue="${RESEARCH_QUEUE_NAME}", ` +
-      `concurrency=${config.research.workerConcurrency})`
+    `concurrency=${config.research.workerConcurrency})`
   );
 
   // Graceful shutdown: stop accepting new jobs, finish in-flight work, then

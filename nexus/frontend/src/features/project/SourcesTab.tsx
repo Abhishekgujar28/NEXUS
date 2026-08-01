@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { ExternalLink, Globe, Github, FileText, Database } from 'lucide-react';
+import { ExternalLink, Globe, Github, FileText, Database, Package, MessageSquare } from 'lucide-react';
 import { researchService } from '@/lib/services';
 import type { ID, ResearchSource, SourceType } from '@/types';
 import { cn, hostOf, pct } from '@/lib/utils';
@@ -14,6 +14,8 @@ const TYPE_FILTERS: { value: string; label: string }[] = [
   { value: 'web', label: 'Web' },
   { value: 'paper', label: 'Papers' },
   { value: 'repo', label: 'Repos' },
+  { value: 'package', label: 'Packages' },
+  { value: 'discussion', label: 'Discussions' },
   { value: 'article', label: 'Articles' },
   { value: 'dataset', label: 'Datasets' },
   { value: 'api', label: 'APIs' },
@@ -25,6 +27,10 @@ function sourceIcon(t: SourceType) {
       return <Github className="h-3.5 w-3.5" />;
     case 'paper':
       return <FileText className="h-3.5 w-3.5" />;
+    case 'package':
+      return <Package className="h-3.5 w-3.5" />;
+    case 'discussion':
+      return <MessageSquare className="h-3.5 w-3.5" />;
     case 'dataset':
     case 'api':
       return <Database className="h-3.5 w-3.5" />;

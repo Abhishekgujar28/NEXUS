@@ -20,12 +20,36 @@ export class SerperProvider implements ResearchProvider {
       logger.debug('Serper not configured — skipping web search');
       return [];
     }
-    const { data } = await safeFetch('https://google.serper.dev/search', {
-      method: 'POST',
-      data: { q: query, num: config.research.maxSourcesPerProvider },
-      headers: { 'X-API-KEY': config.serperApiKey, 'Content-Type': 'application/json' },
+    const url = 'https://google.serper.dev/search';
+    const startTime = Date.now();
+
+    let response: any;
+    try {
+      response = await safeFetch(url, {
+        method: 'POST',
+        data: { q: query, num: config.research.maxSourcesPerProvider },
+        headers: { 'X-API-KEY': config.serperApiKey, 'Content-Type': 'application/json' },
+      });
+    } catch (err: any) {
+      logger.error(`Serper provider request failed [${err?.response?.status || 'ERR'}]: ${err?.message}`, {
+        endpoint: url,
+        latencyMs: Date.now() - startTime,
+        responseData: err?.response?.data,
+      });
+      throw err;
+    }
+
+    const latencyMs = Date.now() - startTime;
+    const organic = response?.data?.organic || [];
+
+    logger.info(`Serper provider succeeded`, {
+      endpoint: url,
+      statusCode: response?.status,
+      latencyMs,
+      retrievedCount: organic.length,
     });
-    return (data.organic || []).map((r: any, i: number): NormalizedSource => ({
+
+    return organic.map((r: any, i: number): NormalizedSource => ({
       provider: 'serper',
       sourceType: 'web',
       title: r.title || 'Untitled',

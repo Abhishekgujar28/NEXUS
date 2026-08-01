@@ -149,3 +149,47 @@ export const emitResearchFailed = (
 ): void => {
   emitToRoom(`project:${projectId}`, 'research:failed', payload);
 };
+
+/**
+ * Emit a batch of sources as soon as a single provider completes, so the
+ * frontend can render results incrementally instead of waiting for the slowest
+ * provider. Carries the provider's status + latency + count alongside the
+ * normalized sources themselves.
+ */
+export const emitResearchSources = (
+  projectId: string,
+  payload: {
+    jobId: string;
+    provider: string;
+    status: 'fulfilled' | 'failed' | 'skipped';
+    count: number;
+    latencyMs: number;
+    optional: boolean;
+    error?: string;
+    sources: unknown[];
+  }
+): void => {
+  emitToRoom(`project:${projectId}`, 'research:sources', payload);
+};
+
+/**
+ * Emit the end-of-job provider health summary (per-provider status, latency and
+ * result counts) so the frontend can render a resilience/diagnostics panel.
+ */
+export const emitProviderHealth = (
+  projectId: string,
+  payload: {
+    jobId: string;
+    projectId: string;
+    providers: Array<{
+      provider: string;
+      status: 'fulfilled' | 'failed' | 'skipped';
+      count: number;
+      latencyMs: number;
+      optional: boolean;
+      error?: string;
+    }>;
+  }
+): void => {
+  emitToRoom(`project:${projectId}`, 'research:provider-health', payload);
+};

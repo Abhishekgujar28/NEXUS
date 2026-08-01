@@ -2,6 +2,13 @@ import 'dotenv/config';
 
 const bool = (v: string | undefined): boolean => v === 'true' || v === '1';
 
+const cleanEnvKey = (v: string | undefined): string => {
+  if (!v) return '';
+  const trimmed = v.trim();
+  if (/^(your-.*|change-this-.*|placeholder)$/i.test(trimmed)) return '';
+  return trimmed;
+};
+
 export const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '5000'),
@@ -22,35 +29,36 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
-  geminiApiKey: process.env.GEMINI_API_KEY || '',
+  geminiApiKey: cleanEnvKey(process.env.GEMINI_API_KEY),
   defaultAiProvider: process.env.DEFAULT_AI_PROVIDER || 'openrouter',
   ai: {
     openrouter: {
-      apiKey: process.env.OPENROUTER_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.OPENROUTER_API_KEY),
       baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
     },
     gemini: {
-      apiKey: process.env.GEMINI_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.GEMINI_API_KEY),
     },
     openai: {
-      apiKey: process.env.OPENAI_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.OPENAI_API_KEY),
     },
     anthropic: {
-      apiKey: process.env.ANTHROPIC_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.ANTHROPIC_API_KEY),
     },
     groq: {
-      apiKey: process.env.GROQ_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.GROQ_API_KEY),
     },
     deepseek: {
-      apiKey: process.env.DEEPSEEK_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.DEEPSEEK_API_KEY),
     },
     together: {
-      apiKey: process.env.TOGETHER_API_KEY || '',
+      apiKey: cleanEnvKey(process.env.TOGETHER_API_KEY),
     },
   },
-  serperApiKey: process.env.SERPER_API_KEY || '',
-  githubToken: process.env.GITHUB_TOKEN || '',
-  semanticScholarApiKey: process.env.SEMANTIC_SCHOLAR_API_KEY || '',
+  serperApiKey: cleanEnvKey(process.env.SERPER_API_KEY),
+  githubToken: cleanEnvKey(process.env.GITHUB_TOKEN),
+  semanticScholarApiKey: cleanEnvKey(process.env.SEMANTIC_SCHOLAR_API_KEY),
+  ieeeApiKey: cleanEnvKey(process.env.IEEE_XPLORE_API_KEY),
   chromaUrl: process.env.CHROMA_URL || 'http://localhost:8000',
   rag: {
     chunkSize: parseInt(process.env.RAG_CHUNK_SIZE || '1200'),
@@ -110,4 +118,5 @@ export const providerStatus = {
   github: () => ({ name: 'GitHub', configured: !!config.githubToken }),
   arxiv: () => ({ name: 'arXiv', configured: true }),
   semanticScholar: () => ({ name: 'Semantic Scholar', configured: true }),
+  ieee: () => ({ name: 'IEEE Xplore', configured: !!config.ieeeApiKey }),
 };

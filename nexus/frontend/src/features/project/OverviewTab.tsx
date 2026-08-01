@@ -113,31 +113,7 @@ export function OverviewTab({ project, stats }: { project: Project; stats: Proje
       )}
 
       {/* Intelligence & Quality Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-border bg-surface">
-          <CardContent className="py-4">
-            <div className="text-xs text-muted-foreground mb-1">Feasibility Index</div>
-            <div className="text-xl font-bold text-citrine-400">88.5 / 100</div>
-            <p className="text-[11px] text-muted-foreground mt-1">High technical & market viability</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-surface">
-          <CardContent className="py-4">
-            <div className="text-xs text-muted-foreground mb-1">Quality & Security Score</div>
-            <div className="text-xl font-bold text-emerald-400">92%</div>
-            <p className="text-[11px] text-muted-foreground mt-1">0 critical security vulnerabilities</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border bg-surface">
-          <CardContent className="py-4">
-            <div className="text-xs text-muted-foreground mb-1">Estimated Cloud & Token Cost</div>
-            <div className="text-xl font-bold text-foreground">₹12,000 / mo</div>
-            <p className="text-[11px] text-muted-foreground mt-1">Optimized serverless architecture (AWS/GCP India)</p>
-          </CardContent>
-        </Card>
-      </div>
+       
 
       {/* Timestamps */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground">

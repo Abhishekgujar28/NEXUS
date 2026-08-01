@@ -18,11 +18,15 @@ import { CriticAgent } from '../agents/critic.agent.js';
 import { ArchitectAgent } from '../agents/architect.agent.js';
 import { RoadmapAgent } from '../agents/roadmap.agent.js';
 import { JobCheckpoint } from '../models/JobCheckpoint.js';
+import { ProviderMetricsLog } from '../models/ProviderMetricsLog.js';
 import { NormalizedSource } from '../research/providers/ResearchProvider.js';
+import type { ProviderOutcome, ProviderResult } from '../research/providerRegistry.js';
 import {
   emitResearchProgress,
   emitResearchComplete,
   emitResearchFailed,
+  emitResearchSources,
+  emitProviderHealth,
 } from '../socket/socket.server.js';
 import { indexResearchSources } from '../rag/pipeline.js';
 
@@ -128,6 +132,115 @@ export class ResearchOrchestrator {
   }
 
   /**
+   * Idempotently persist one provider's sources as they stream in. Uses the
+   * same per-source upsert keyed on (job, sourceHash) as the batch write, so
+   * streaming and any later reconciliation never create duplicates. Never
+   * throws: a persistence hiccup for one provider must not fail the job.
+   */
+  private async persistProviderSources(sources: NormalizedSource[]): Promise<number> {
+    if (sources.length === 0) return 0;
+    const byHash = new Map<string, NormalizedSource>();
+    for (const source of sources) byHash.set(sourceHash(source), source);
+    try {
+      await ResearchSource.bulkWrite(
+        [...byHash.entries()].map(([hash, s]) => ({
+          updateOne: {
+            filter: { researchJobId: this.researchJobId, sourceHash: hash },
+            update: {
+              $set: {
+                projectId: this.projectId,
+                researchJobId: this.researchJobId,
+                sourceHash: hash,
+                provider: s.provider,
+                sourceType: s.sourceType,
+                title: s.title,
+                url: s.url,
+                authors: s.authors,
+                // publishedAt is already sanitized to a valid Date | null.
+                publishedAt: s.publishedAt ?? undefined,
+                snippet: s.snippet,
+                content: s.content,
+                query: s.query,
+                metadata: s.metadata,
+                relevanceScore: s.relevanceScore,
+                credibilityScore: s.credibilityScore,
+              },
+            },
+            upsert: true,
+          },
+        })) as any,
+        { ordered: false }
+      );
+    } catch (err) {
+      logger.warn('Failed to persist streamed provider sources', {
+        error: (err as Error).message,
+      });
+    }
+    return byHash.size;
+  }
+
+  /**
+   * Handle one provider completing during deep search: persist its sources and
+   * stream them to the frontend with the provider's status/latency/count.
+   */
+  private async onProviderComplete(result: ProviderResult): Promise<void> {
+    await this.persistProviderSources(result.sources);
+    emitResearchSources(this.projectId, {
+      jobId: this.researchJobId,
+      provider: result.provider,
+      status: result.status,
+      count: result.count,
+      latencyMs: result.latencyMs,
+      optional: result.optional,
+      error: result.error,
+      sources: result.sources,
+    });
+  }
+
+  /**
+   * Write the provider health summary to durable storage: onto the job's
+   * metadata (for quick reads) and as one row per provider in
+   * ProviderMetricsLog (for time-series diagnostics). Emits over socket too.
+   */
+  private async recordProviderHealth(job: JobDoc, health: ProviderOutcome[]): Promise<void> {
+    const summary = health.map((h) => ({
+      provider: h.provider,
+      status: h.status,
+      count: h.count,
+      latencyMs: h.latencyMs,
+      optional: h.optional,
+      error: h.error,
+    }));
+
+    job.metadata = { ...(job.metadata || {}), providerHealth: summary };
+
+    // One metrics-log row per provider. Best-effort — never blocks the job.
+    try {
+      await ProviderMetricsLog.insertMany(
+        health.map((h) => ({
+          providerName: h.provider,
+          providerType: 'search' as const,
+          state: h.status === 'fulfilled' ? 'CLOSED' : 'OPEN',
+          failures: h.status === 'failed' ? 1 : 0,
+          successes: h.status === 'fulfilled' ? 1 : 0,
+          lastFailureReason: h.error,
+          latencyMs: h.latencyMs,
+          timestamp: new Date(),
+        })),
+        { ordered: false }
+      );
+    } catch (err) {
+      logger.warn('Failed to write provider metrics log', { error: (err as Error).message });
+    }
+
+    emitProviderHealth(this.projectId, {
+      jobId: this.researchJobId,
+      projectId: this.projectId,
+      providers: summary,
+    });
+  }
+
+  /**
    * Run the full multi-agent research pipeline end to end with stage checkpointing.
    */
   async run(): Promise<void> {
@@ -223,46 +336,50 @@ export class ResearchOrchestrator {
       await job.save();
 
       const deepSearch = new DeepSearchAgent();
-      const { sources } = await deepSearch.execute({ queries });
+      // Sources are persisted + streamed to the frontend per provider as each
+      // completes (via onProviderComplete); the returned `sources` are the
+      // deduped union used by downstream analysis stages.
+      const { sources, providerHealth } = await deepSearch.execute({
+        queries,
+        onProviderComplete: (result) => this.onProviderComplete(result),
+      });
 
+      // The reconciling batch write is idempotent with the streamed upserts,
+      // so it simply guarantees the final deduped set is fully persisted.
       const uniqueSources = new Map<string, NormalizedSource>();
-      if (sources.length > 0) {
-        // Provider output is already de-duplicated, but preserve the database
-        // boundary as idempotent too: BullMQ retries must never insert a second
-        // copy of the same source for the same job.
-        for (const source of sources) uniqueSources.set(sourceHash(source), source);
-        await ResearchSource.bulkWrite(
-          [...uniqueSources.entries()].map(([hash, s]) => ({
-            updateOne: {
-              filter: { researchJobId: this.researchJobId, sourceHash: hash },
-              update: { $set: {
-            projectId: this.projectId,
-            researchJobId: this.researchJobId,
-            sourceHash: hash,
-            provider: s.provider,
-            sourceType: s.sourceType,
-            title: s.title,
-            url: s.url,
-            authors: s.authors,
-            publishedAt: s.publishedAt ?? undefined,
-            snippet: s.snippet,
-            content: s.content,
-            query: s.query,
-            metadata: s.metadata,
-            relevanceScore: s.relevanceScore,
-            credibilityScore: s.credibilityScore,
-              } },
-              upsert: true,
-            },
-          })) as any
-        );
-      }
+      for (const source of sources) uniqueSources.set(sourceHash(source), source);
+      await this.persistProviderSources(sources);
 
-      this.setStage(job, 'search_web', 'completed');
-      this.setStage(job, 'search_papers', 'completed');
-      this.setStage(job, 'search_github', 'completed');
+      // Record + emit the provider health summary (status, latency, counts) and
+      // stash it on the job metadata + metrics log.
+      await this.recordProviderHealth(job, providerHealth);
+
+      // The search stage succeeds as long as at least one provider returned
+      // sources. If every provider was skipped or failed, the stage genuinely
+      // failed and the job cannot proceed. Optional providers (e.g. IEEE 403)
+      // never count against this because a failed optional provider simply
+      // contributes zero sources — it doesn't gate success.
+      const anyProviderSucceeded = providerHealth.some(
+        (p) => p.status === 'fulfilled' && p.count > 0
+      );
+      const searchStatus = anyProviderSucceeded ? 'completed' : 'failed';
+      const healthNote = providerHealth
+        .map((p) => `${p.provider}:${p.status}(${p.count})`)
+        .join(', ');
+
+      this.setStage(job, 'search_web', searchStatus, healthNote);
+      this.setStage(job, 'search_papers', searchStatus, healthNote);
+      this.setStage(job, 'search_github', searchStatus, healthNote);
       job.sourceCount = uniqueSources.size;
       await job.save();
+
+      if (!anyProviderSucceeded) {
+        throw new AppError(
+          `Deep search produced no sources — all providers skipped or failed (${healthNote})`,
+          502,
+          ErrorCodes.BAD_GATEWAY
+        );
+      }
 
       // Stage 6 & 7: Analyze Research & Extract Existing Solutions
       this.setStage(job, 'analyze', 'running');
@@ -424,6 +541,7 @@ export class ResearchOrchestrator {
       job.completedAt = new Date();
       job.progress = 100;
       job.metadata = {
+        ...(job.metadata || {}),
         queries,
         critique: criticResult,
       };
