@@ -1,4 +1,4 @@
-# FORGE - AI Research & Innovation Copilot
+# NEXUS - AI Research & Innovation Copilot
 
 ## Getting Started
 
