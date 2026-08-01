@@ -102,6 +102,10 @@ export const emitToRoom = (room: string, event: string, payload: unknown): void 
   io.to(room).emit(event, payload);
 };
 
+export const emitToProject = (projectId: string, event: string, payload: unknown): void => {
+  emitToRoom(`project:${projectId}`, event, payload);
+};
+
 /**
  * Emit research progress update to project room.
  */

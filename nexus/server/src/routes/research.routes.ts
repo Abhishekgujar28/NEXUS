@@ -17,6 +17,8 @@ import { verifyAuth } from '../middleware/auth.middleware.js';
 import { projectAuth } from '../middleware/projectAuth.js';
 import { researchMutationLimiter } from '../middleware/rateLimit.middleware.js';
 import { validate } from '../middleware/validate.middleware.js';
+import { projectLockMiddleware } from '../middleware/projectLock.middleware.js';
+import { backpressureMiddleware } from '../middleware/backpressure.middleware.js';
 import {
   previewResearchSchema,
   startResearchSchema,
@@ -29,7 +31,7 @@ const router = Router({ mergeParams: true });
 router.use(verifyAuth, projectAuth('viewer'));
 
 // Mutations require at least editor & rate limiting; read endpoints only need viewer.
-router.post('/start', projectAuth('editor'), researchMutationLimiter, validate(startResearchSchema), asyncHandler(startResearch));
+router.post('/start', projectAuth('editor'), researchMutationLimiter, projectLockMiddleware, backpressureMiddleware, validate(startResearchSchema), asyncHandler(startResearch));
 router.post('/preview', projectAuth('editor'), researchMutationLimiter, validate(previewResearchSchema), asyncHandler(previewResearchSources));
 router.post('/test-agent', projectAuth('editor'), researchMutationLimiter, validate(testAgentSchema), asyncHandler(testAgent));
 router.get('/job', asyncHandler(getResearchJob));

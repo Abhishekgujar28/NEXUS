@@ -21,6 +21,10 @@ import { projectsService } from '@/lib/services';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { CommandMenu } from '@/components/CommandMenu';
+import { CommandPaletteModal } from '@/components/search/CommandPaletteModal';
+import { FloatingCopilotButton } from '@/components/copilot/FloatingCopilotButton';
+import { CopilotChatWindow } from '@/components/copilot/CopilotChatWindow';
+import { NotificationTray } from '@/components/shared/NotificationTray';
 import { PageTransition } from '@/components/PageTransition';
 import { LiveDot } from '@/components/LiveDot';
 import { getPinnedProjects } from '@/components/PinButton';
@@ -297,6 +301,9 @@ export function AppLayout() {
       </main>
 
       <CommandMenu />
+      <CommandPaletteModal />
+      <FloatingCopilotButton />
+      <CopilotChatWindow />
     </div>
   );
 }

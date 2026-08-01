@@ -313,6 +313,54 @@ export function BuildModeTab({ projectId }: { projectId: ID }) {
         </div>
       </div>
 
+      {/* System Architecture Blueprint & Recommended Specs */}
+      <Card className="border-border">
+        <CardContent className="py-5 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <Boxes className="h-4 w-4 text-citrine-400" />
+            Project Blueprint & Specifications
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
+            <div className="p-3 rounded-lg bg-muted/40 border border-border">
+              <div className="text-xs font-semibold text-foreground mb-1">Recommended Folder Structure</div>
+              <pre className="text-[10px] font-mono text-citrine-300 leading-relaxed overflow-x-auto">
+{`src/
+├── controllers/
+├── services/
+├── models/
+├── routes/
+└── middleware/`}
+              </pre>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/40 border border-border">
+              <div className="text-xs font-semibold text-foreground mb-1">API & Database Contracts</div>
+              <pre className="text-[10px] font-mono text-citrine-300 leading-relaxed overflow-x-auto">
+{`REST: /api/v1/projects
+REST: /api/v1/research
+WS:   /socket.io
+DB:   MongoDB + Mongoose`}
+              </pre>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/40 border border-border">
+              <div className="text-xs font-semibold text-foreground mb-1">Deployment Plan</div>
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                Docker containerized deployment with Nginx proxy, Redis BullMQ workers, and TLS termination.
+              </div>
+            </div>
+
+            <div className="p-3 rounded-lg bg-muted/40 border border-border">
+              <div className="text-xs font-semibold text-foreground mb-1">Technology Stack</div>
+              <div className="text-xs text-muted-foreground leading-relaxed">
+                React 18 + Vite, Express.js, TypeScript, Node.js, Redis, MongoDB, Framer Motion.
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <p className="text-2xs text-muted-foreground italic">
         Task state is stored in this session only — a persistent build ledger will arrive
         when the backend exposes a tasks endpoint.

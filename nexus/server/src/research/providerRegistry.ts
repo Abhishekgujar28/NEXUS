@@ -6,6 +6,8 @@ import { ArxivProvider } from './providers/arxiv.provider.js';
 import { GitHubProvider } from './providers/github.provider.js';
 import { SemanticScholarProvider } from './providers/semanticScholar.provider.js';
 import { SerperProvider } from './providers/serper.provider.js';
+import { StackOverflowProvider } from './providers/stackoverflow.provider.js';
+import { NpmProvider } from './providers/npm.provider.js';
 import type {
   NormalizedSource,
   ProviderName,

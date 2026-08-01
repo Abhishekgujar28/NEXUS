@@ -26,7 +26,11 @@ import { ViewportInitialize } from '@/components/landing/ViewportInitialize';
  * Viewport 6: Developer Integration
  * Viewport 7: Initialize
  */
+import { useAuthStore } from '@/stores/auth';
+
 export function LandingPage() {
+  const status = useAuthStore((s) => s.status);
+
   return (
     <motion.div
       initial="initial"
@@ -43,12 +47,20 @@ export function LandingPage() {
             NEXUS
           </Link>
           <nav className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
-            <Link to="/register">
-              <Button variant="primary" size="sm">Start free</Button>
-            </Link>
+            {status === 'authed' ? (
+              <Link to="/app">
+                <Button variant="primary" size="sm">Go to Dashboard</Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm">Sign in</Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="primary" size="sm">Start free</Button>
+                </Link>
+              </>
+            )}
           </nav>
         </div>
       </header>

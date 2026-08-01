@@ -6,6 +6,8 @@ import type { ResearchStage, StageStatus, ID } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Progress } from '@/components/ui/progress';
+import { PipelineStepper } from '@/components/pipeline/PipelineStepper';
+import { QueueStatusBanner } from '@/components/pipeline/QueueStatusBanner';
 
 function stageIcon(status: StageStatus) {
   switch (status) {
@@ -97,31 +99,24 @@ export function ResearchProgressTab({ projectId }: { projectId: ID }) {
   }
 
   const stages = job.stages ?? [];
+  const completedKeys = stages.filter((s) => s.status === 'completed').map((s) => s.key);
+  const currentStage = stages.find((s) => s.status === 'running')?.key || 'understand';
 
   return (
-    <div className="animate-fade-in max-w-2xl">
-      {/* Top summary */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">Research Pipeline</h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {job.status === 'completed'
-              ? 'Research completed'
-              : job.status === 'running'
-              ? 'Research in progress…'
-              : job.status === 'failed'
-              ? 'Research failed'
-              : `Status: ${job.status}`}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="text-xs tabular text-muted-foreground">{job.progress}%</span>
-          <Progress value={job.progress} className="w-32" />
-        </div>
-      </div>
+    <div className="animate-fade-in max-w-4xl space-y-6">
+      {job.status === 'queued' && (
+        <QueueStatusBanner queuePosition={1} estimatedWaitTimeSeconds={120} />
+      )}
+
+      {/* Interactive 11-Stage Pipeline Stepper */}
+      <PipelineStepper
+        currentStageKey={currentStage}
+        completedKeys={completedKeys}
+        progress={job.progress}
+      />
 
       {/* Stage timeline */}
-      <div className="pl-1">
+      <div className="pl-1 pt-4">
         {stages.map((stage, i) => (
           <StageLine key={stage.key} stage={stage} isLast={i === stages.length - 1} />
         ))}

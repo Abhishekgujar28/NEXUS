@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, useNavigate, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,7 +17,9 @@ import {
   AlertTriangle,
   Package,
   Hammer,
+  Download,
 } from 'lucide-react';
+import { ExportCenterModal } from '@/components/export/ExportCenterModal';
 import { projectsService, researchService } from '@/lib/services';
 import { cn } from '@/lib/utils';
 import { apiErrorMessage } from '@/lib/api';
@@ -55,6 +58,7 @@ const TABS = [
 ] as const;
 
 export function ProjectPage() {
+  const [exportModalOpen, setExportModalOpen] = useState(false);
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -146,6 +150,15 @@ export function ProjectPage() {
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="ghost"
+            size="md"
+            onClick={() => setExportModalOpen(true)}
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            Export
+          </Button>
+
           {canStartResearch && (
             <Button
               variant="primary"
@@ -165,6 +178,13 @@ export function ProjectPage() {
           )}
         </div>
       </div>
+
+      <ExportCenterModal
+        projectId={project._id}
+        projectTitle={project.title}
+        open={exportModalOpen}
+        onOpenChange={setExportModalOpen}
+      />
 
       {/* Tab nav */}
       <nav className="flex items-stretch gap-0.5 border-b border-border mb-6 overflow-x-auto no-scrollbar -mx-6 px-6">

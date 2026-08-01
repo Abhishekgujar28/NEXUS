@@ -17,6 +17,7 @@ import { GapFinderAgent } from '../agents/gapFinder.agent.js';
 import { CriticAgent } from '../agents/critic.agent.js';
 import { ArchitectAgent } from '../agents/architect.agent.js';
 import { RoadmapAgent } from '../agents/roadmap.agent.js';
+import { JobCheckpoint } from '../models/JobCheckpoint.js';
 import { NormalizedSource } from '../research/providers/ResearchProvider.js';
 import {
   emitResearchProgress,
@@ -97,8 +98,37 @@ export class ResearchOrchestrator {
     });
   }
 
+  private async saveCheckpoint(stageKey: string, stageIndex: number, outputData: any): Promise<void> {
+    try {
+      await JobCheckpoint.findOneAndUpdate(
+        { jobId: this.researchJobId },
+        {
+          $set: {
+            projectId: this.projectId,
+            currentStage: stageIndex,
+            [`stageOutputs.${stageKey}`]: outputData,
+          },
+          $addToSet: { completedStages: stageIndex },
+        },
+        { upsert: true, new: true }
+      );
+    } catch (err) {
+      logger.warn(`Failed to save checkpoint for stage ${stageKey}`, { error: (err as Error).message });
+    }
+  }
+
+  private async getCheckpoint(): Promise<{ completedStages: number[]; stageOutputs: Record<string, any> } | null> {
+    try {
+      const cp = await JobCheckpoint.findOne({ jobId: this.researchJobId });
+      if (!cp) return null;
+      return { completedStages: cp.completedStages || [], stageOutputs: cp.stageOutputs || {} };
+    } catch (err) {
+      return null;
+    }
+  }
+
   /**
-   * Run the full multi-agent research pipeline end to end.
+   * Run the full multi-agent research pipeline end to end with stage checkpointing.
    */
   async run(): Promise<void> {
     logger.info(`Starting ResearchOrchestrator for job ${this.researchJobId}`);
@@ -113,9 +143,14 @@ export class ResearchOrchestrator {
       throw new AppError('Project not found or deleted', 404, ErrorCodes.NOT_FOUND);
     }
 
+    // Fetch existing checkpoint if worker is resuming after crash
+    const checkpoint = await this.getCheckpoint();
+    const completedStages = new Set(checkpoint?.completedStages || []);
+    const stageOutputs = checkpoint?.stageOutputs || {};
+
     // Mark Job & Project running
     job.status = 'running';
-    job.startedAt = new Date();
+    job.startedAt = job.startedAt || new Date();
     await job.save();
     await Project.findByIdAndUpdate(this.projectId, {
       status: 'researching',
@@ -124,42 +159,61 @@ export class ResearchOrchestrator {
 
     try {
       // Stage 1: Understand Problem
-      this.setStage(job, 'understand', 'running');
-      job.progress = STAGE_PROGRESS_MAP.understand;
-      await job.save();
+      let understanding: any;
+      if (completedStages.has(1) && stageOutputs.understand) {
+        logger.info(`Resuming Stage 1 from checkpoint for job ${this.researchJobId}`);
+        understanding = stageOutputs.understand;
+        this.setStage(job, 'understand', 'completed', 'Loaded from checkpoint');
+        await job.save();
+      } else {
+        this.setStage(job, 'understand', 'running');
+        job.progress = STAGE_PROGRESS_MAP.understand;
+        await job.save();
 
-      const understandAgent = new ProblemUnderstandingAgent();
-      const understanding = await understandAgent.execute({
-        title: project.title,
-        description: project.description,
-        domain: project.domain ?? undefined,
-        projectType: project.projectType ?? undefined,
-        targetUsers: project.targetUsers ?? undefined,
-        platform: project.platform ?? undefined,
-        preferredTech: project.preferredTech ?? undefined,
-        constraints: project.constraints ?? undefined,
-        teamSize: project.teamSize ?? undefined,
-        timeline: project.timeline ?? undefined,
-        skillLevel: project.skillLevel ?? undefined,
-      });
+        const understandAgent = new ProblemUnderstandingAgent();
+        understanding = await understandAgent.execute({
+          title: project.title,
+          description: project.description,
+          domain: project.domain ?? undefined,
+          projectType: project.projectType ?? undefined,
+          targetUsers: project.targetUsers ?? undefined,
+          platform: project.platform ?? undefined,
+          preferredTech: project.preferredTech ?? undefined,
+          constraints: project.constraints ?? undefined,
+          teamSize: project.teamSize ?? undefined,
+          timeline: project.timeline ?? undefined,
+          skillLevel: project.skillLevel ?? undefined,
+        });
 
-      this.setStage(job, 'understand', 'completed');
-      await job.save();
+        this.setStage(job, 'understand', 'completed');
+        await job.save();
+        await this.saveCheckpoint('understand', 1, understanding);
+      }
 
       // Stage 2: Plan Queries
-      this.setStage(job, 'plan', 'running');
-      job.progress = STAGE_PROGRESS_MAP.plan;
-      await job.save();
+      let queries: any;
+      if (completedStages.has(2) && stageOutputs.queries) {
+        logger.info(`Resuming Stage 2 from checkpoint for job ${this.researchJobId}`);
+        queries = stageOutputs.queries;
+        this.setStage(job, 'plan', 'completed', 'Loaded from checkpoint');
+        await job.save();
+      } else {
+        this.setStage(job, 'plan', 'running');
+        job.progress = STAGE_PROGRESS_MAP.plan;
+        await job.save();
 
-      const queryPlanner = new QueryPlannerAgent();
-      const { queries } = await queryPlanner.execute({
-        title: project.title,
-        description: project.description,
-        understanding,
-      });
+        const queryPlanner = new QueryPlannerAgent();
+        const planned = await queryPlanner.execute({
+          title: project.title,
+          description: project.description,
+          understanding,
+        });
+        queries = planned.queries;
 
-      this.setStage(job, 'plan', 'completed');
-      await job.save();
+        this.setStage(job, 'plan', 'completed');
+        await job.save();
+        await this.saveCheckpoint('queries', 2, queries);
+      }
 
       // Stage 3-5: Deep Search (Web, Papers, Code)
       this.setStage(job, 'search_web', 'running');

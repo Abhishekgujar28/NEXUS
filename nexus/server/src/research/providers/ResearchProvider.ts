@@ -1,5 +1,26 @@
-export type SourceType = 'paper' | 'article' | 'repo' | 'dataset' | 'api' | 'web';
-export type ProviderName = 'serper' | 'github' | 'arxiv' | 'semanticScholar';
+export type SourceType = 'paper' | 'article' | 'repo' | 'dataset' | 'api' | 'web' | 'patent' | 'talk' | 'package' | 'rfc' | 'advisory' | 'discussion';
+export type ProviderName =
+  | 'serper'
+  | 'github'
+  | 'arxiv'
+  | 'semanticScholar'
+  | 'stackoverflow'
+  | 'reddit'
+  | 'devto'
+  | 'medium'
+  | 'hackerNews'
+  | 'googlePatents'
+  | 'youtubeTalks'
+  | 'docsScraper'
+  | 'npm'
+  | 'pypi'
+  | 'dockerHub'
+  | 'awesomeLists'
+  | 'datasets'
+  | 'securityAdvisories'
+  | 'rfcs'
+  | 'ieee'
+  | 'openAlex';
 
 export interface NormalizedSource {
   provider: ProviderName;

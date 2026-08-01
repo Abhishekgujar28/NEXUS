@@ -27,7 +27,7 @@ export function RegisterPage() {
     try {
       await register(form.name, form.email, form.password);
       toast.success('Account created');
-      navigate('/');
+      navigate('/app');
     } catch (err) {
       setError(apiErrorMessage(err));
     } finally {

@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/ui/empty-state';
+import { MermaidViewer } from '@/components/diagram/MermaidViewer';
 
 function categoryIcon(cat?: string) {
   switch (cat) {
@@ -120,6 +121,12 @@ export function ArchitectureTab({ projectId }: { projectId: ID }) {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      {/* Interactive Mermaid Diagram Viewer */}
+      <section>
+        <h3 className="text-sm font-semibold text-foreground mb-3">System Architecture Visualizations</h3>
+        <MermaidViewer mermaidSource={arch?.dataFlow ? `graph TD;\n  A[Client Request] --> B[API Gateway];\n  B --> C[Redis Lock];\n  C --> D[Worker Pool];\n  D --> E[Multi-Agent Engine];` : undefined} />
+      </section>
+
       {/* Overview */}
       {arch?.overview && (
         <Card>
