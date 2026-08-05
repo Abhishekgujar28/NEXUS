@@ -569,12 +569,12 @@ export class ResearchOrchestrator {
         isAIProviderError: isAIError,
         ...(isAIError
           ? {
-              provider: (err as AIProviderError).provider,
-              model: (err as AIProviderError).model,
-              statusCode: (err as AIProviderError).statusCode,
-              retryDelayMs: (err as AIProviderError).retryDelayMs,
-              isQuotaError: (err as AIProviderError).isQuotaError,
-            }
+            provider: (err as AIProviderError).provider,
+            model: (err as AIProviderError).model,
+            statusCode: (err as AIProviderError).statusCode,
+            retryDelayMs: (err as AIProviderError).retryDelayMs,
+            isQuotaError: (err as AIProviderError).isQuotaError,
+          }
           : {}),
       });
 
