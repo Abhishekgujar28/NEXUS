@@ -144,10 +144,9 @@ export class GeminiProvider implements AIProvider {
     return this.executeWithModelFallback(models, async (modelName) => {
       const model = ai.getGenerativeModel({
         model: modelName,
-        generationConfig: { responseMimeType: 'application/json' },
         ...(system ? { systemInstruction: system } : {}),
       });
-      const res = await model.generateContent(prompt);
+      const res = await model.generateContent(`${prompt}\n\nRespond with valid JSON only.`);
       const raw = res.response.text();
       try {
         return JSON.parse(extractJson(raw)) as T;
