@@ -500,7 +500,7 @@ NEXUS connects to 7 major LLM providers via a unified interface:
 
 ## 15. Application Screenshots
 
- 
+*(Placeholder section — add application screenshots below)*
 
 <details>
 <summary>📸 View Application UI Placeholders</summary>
