@@ -22,6 +22,9 @@ redis.on('connect', () => {
 });
 
 export const connectRedis = async (): Promise<void> => {
+  if (['connecting', 'connect', 'ready'].includes(redis.status)) {
+    return;
+  }
   try {
     await redis.connect();
   } catch (err) {

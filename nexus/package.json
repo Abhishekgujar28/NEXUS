@@ -1,0 +1,15 @@
+{
+  "name": "nexus-root",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NEXUS AI Research Copilot - Root Workspace",
+  "scripts": {
+    "frontend": "npm --prefix frontend run dev",
+    "backend": "npm --prefix server run dev",
+    "worker": "npm --prefix server run worker",
+    "dev": "concurrently -k -p \"[{name}]\" -n \"FRONTEND,BACKEND,WORKER\" -c \"cyan.bold,blue.bold,magenta.bold\" \"npm run frontend\" \"npm run backend\" \"npm run worker\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

@@ -33,7 +33,7 @@ const stageSchema = new mongoose.Schema(
     },
     estimatedCost: { type: Number, default: 0 },
   },
-  { _id: false }
+  { _id: false, suppressReservedKeysWarning: true }
 );
 
 const researchJobSchema = new mongoose.Schema(
