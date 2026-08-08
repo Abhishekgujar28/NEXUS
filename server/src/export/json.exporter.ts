@@ -1,11 +1,11 @@
-import { ProjectExportData } from './markdown.exporter.js';
+import { ResearchExportData } from './export.types.js';
 
-export const buildJsonReport = (data: ProjectExportData): string => {
+export const buildJsonReport = (data: ResearchExportData): string => {
   return JSON.stringify(
     {
+      nexusVersion: '2.0.0',
       exportedAt: new Date().toISOString(),
-      version: '2.0.0',
-      data,
+      report: data,
     },
     null,
     2

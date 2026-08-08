@@ -490,6 +490,7 @@ export class ResearchOrchestrator {
 
       this.setStage(job, 'architecture', 'completed');
       await job.save();
+      await this.saveCheckpoint('architecture', 10, architectureResult);
 
       // Stage 11: Roadmap
       this.setStage(job, 'roadmap', 'running');
@@ -505,6 +506,7 @@ export class ResearchOrchestrator {
       });
 
       this.setStage(job, 'roadmap', 'completed');
+      await this.saveCheckpoint('roadmap', 11, roadmapResult);
 
       // Update Project Problem Understanding Blob
       await Project.findByIdAndUpdate(this.projectId, {
@@ -547,8 +549,11 @@ export class ResearchOrchestrator {
       job.progress = 100;
       job.metadata = {
         ...(job.metadata || {}),
+        understanding,
         queries,
         critique: criticResult,
+        architecture: architectureResult,
+        roadmap: roadmapResult,
       };
       await job.save();
 

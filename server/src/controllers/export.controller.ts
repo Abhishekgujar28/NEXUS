@@ -8,8 +8,9 @@ export const requestExport = asyncHandler(async (req: Request, res: Response) =>
   const projectId = req.params.id;
   const format = req.params.format as ExportFormat;
   const userId = req.user!._id;
+  const jobId = (req.query.jobId || req.query.researchJobId) as string | undefined;
 
-  const { artifact, content } = await ExportService.generateReport(projectId, userId, format);
+  const { artifact, content } = await ExportService.generateReport(projectId, userId, format, jobId);
 
   if (req.query.download === 'true') {
     const contentTypeMap: Record<ExportFormat, string> = {
@@ -20,8 +21,9 @@ export const requestExport = asyncHandler(async (req: Request, res: Response) =>
       json: 'application/json',
     };
 
+    const ext = format === 'markdown' ? 'md' : format;
     res.setHeader('Content-Type', contentTypeMap[format] || 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${projectId}-report.${format === 'markdown' ? 'md' : format}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${projectId}-report.${ext}"`);
     return res.send(content);
   }
 

@@ -182,6 +182,7 @@ export function ProjectPage() {
       <ExportCenterModal
         projectId={project._id}
         projectTitle={project.title}
+        isResearching={isResearching}
         open={exportModalOpen}
         onOpenChange={setExportModalOpen}
       />
