@@ -117,6 +117,6 @@ export const providerStatus = {
   serper: () => ({ name: 'Serper', configured: !!config.serperApiKey }),
   github: () => ({ name: 'GitHub', configured: !!config.githubToken }),
   arxiv: () => ({ name: 'arXiv', configured: true }),
-  semanticScholar: () => ({ name: 'Semantic Scholar', configured: true }),
+  semanticScholar: () => ({ name: 'Semantic Scholar', configured: !!config.semanticScholarApiKey }),
   ieee: () => ({ name: 'IEEE Xplore', configured: !!config.ieeeApiKey }),
 };

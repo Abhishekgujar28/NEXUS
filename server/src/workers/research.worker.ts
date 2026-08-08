@@ -25,8 +25,8 @@ import { ResearchOrchestrator } from '../orchestrator/research.orchestrator.js';
  * cleanly and the pipeline is honest about what actually ran.
  */
 
-/** Stages fed by the Provider Registry in this phase. */
-const SEARCH_STAGES = ['search_web', 'search_papers', 'search_github'] as const;
+/** Stage fed by the Provider Registry. */
+const SEARCH_STAGES = ['search'] as const;
 
 /** Stages that depend on the not-yet-built AI agents; skipped for now. */
 const AI_STAGES = ['analyze', 'solutions', 'gaps', 'stress', 'architecture', 'roadmap'] as const;

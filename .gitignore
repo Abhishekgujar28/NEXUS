@@ -10,3 +10,11 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
+
+# Ignore markdown files except README.md
+*.md
+!README.md
+!readme.md
+!**/README.md
+!**/readme.md
+

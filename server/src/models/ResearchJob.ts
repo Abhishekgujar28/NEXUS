@@ -3,9 +3,7 @@ import mongoose from 'mongoose';
 export const RESEARCH_STAGES = [
   { key: 'understand', label: 'Understanding Idea' },
   { key: 'plan', label: 'Planning Queries' },
-  { key: 'search_web', label: 'Searching Web' },
-  { key: 'search_papers', label: 'Searching Papers' },
-  { key: 'search_github', label: 'Searching GitHub' },
+  { key: 'search', label: 'Searching Sources' },
   { key: 'analyze', label: 'Analyzing Evidence' },
   { key: 'solutions', label: 'Finding Solutions' },
   { key: 'gaps', label: 'Discovering Gaps' },

@@ -22,30 +22,36 @@ export const embedText = async (text: string): Promise<number[]> => {
  */
 export const embedBatch = async (
   chunks: ChunkData[],
-  batchSize = 10
+  batchSize = 50
 ): Promise<ChunkWithEmbedding[]> => {
   if (chunks.length === 0) return [];
 
-  logger.info(`Embedding batch of ${chunks.length} chunks via Gemini embedder`);
+  logger.info(`Embedding ${chunks.length} chunks in batches of ${batchSize} (concurrency=3)`);
   const results: ChunkWithEmbedding[] = [];
+  const batches: ChunkData[][] = [];
 
   for (let i = 0; i < chunks.length; i += batchSize) {
-    const batch = chunks.slice(i, i + batchSize);
-    const batchEmbeddings = await Promise.all(
-      batch.map(async (chunk) => {
+    batches.push(chunks.slice(i, i + batchSize));
+  }
+
+  const CONCURRENCY = 3;
+  for (let i = 0; i < batches.length; i += CONCURRENCY) {
+    const window = batches.slice(i, i + CONCURRENCY);
+    await Promise.all(
+      window.map(async (batch) => {
         try {
-          const embedding = await embedText(chunk.text);
-          return { ...chunk, embedding };
+          const texts = batch.map((c) => c.text);
+          const embeddings = await aiProvider.embedBatch!(texts);
+
+          for (let j = 0; j < batch.length; j++) {
+            const embedding = embeddings[j] ?? new Array(1536).fill(0);
+            results.push({ ...batch[j], embedding });
+          }
         } catch (err) {
-          logger.warn(`Failed to embed chunk ${chunk.id}`, { error: (err as Error).message });
-          return null;
+          logger.warn(`Failed to embed chunk batch`, { error: (err as Error).message });
         }
       })
     );
-
-    for (const item of batchEmbeddings) {
-      if (item) results.push(item);
-    }
   }
 
   return results;

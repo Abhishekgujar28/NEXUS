@@ -175,10 +175,13 @@ export class AIRouter implements AIProvider {
     promptText: string,
     options?: AIGenerateOptions
   ): Promise<T> {
-    const taskCategory = options?.taskCategory || 'research';
+    const isEmbed = operationName === 'embed';
+    const taskCategory = options?.taskCategory || (isEmbed ? 'embedding' : 'research');
     const defaultPrimary = config.defaultAiProvider || 'openrouter';
     const providerChain = getProviderChainForTask(taskCategory, defaultPrimary);
-    const targetModel = options?.model || TASK_MODEL_REGISTRY[taskCategory]?.primaryModel || 'default';
+    const targetModel = isEmbed
+      ? 'openai/text-embedding-3-small'
+      : (options?.model || TASK_MODEL_REGISTRY[taskCategory]?.primaryModel || 'default');
 
     logger.info(
       `[AIRouter Runtime] Request Routing: TaskCategory="${taskCategory}" | Provider Chosen="${providerChain[0]}" | Model Chosen="${targetModel}" | Fallback Chain=[${providerChain.join(' -> ')}]`
@@ -212,11 +215,11 @@ export class AIRouter implements AIProvider {
           // Asynchronous telemetry logging
           this.logTelemetry({
             provider: provider.name,
-            model: options?.model || provider.getModels()[0] || targetModel,
+            model: isEmbed ? 'openai/text-embedding-3-small' : (options?.model || provider.getModels()[0] || targetModel),
             taskCategory,
             latencyMs,
             promptText,
-            resultText: typeof result === 'string' ? result : JSON.stringify(result),
+            resultText: isEmbed ? '' : (typeof result === 'string' ? result : JSON.stringify(result)),
             fallbackUsed: fallbackCount > 0,
             retriesCount: totalRetries,
             success: true,
@@ -290,10 +293,13 @@ export class AIRouter implements AIProvider {
     success: boolean;
     error?: string;
   }): void {
+    const isEmbed = params.taskCategory === 'embedding';
     const promptTokens = estimateTokens(params.promptText);
-    const completionTokens = estimateTokens(params.resultText);
+    const completionTokens = isEmbed ? 0 : estimateTokens(params.resultText);
     const totalTokens = promptTokens + completionTokens;
-    const estimatedCost = calculateCost(params.provider, promptTokens, completionTokens);
+    const estimatedCost = isEmbed
+      ? Number(((promptTokens / 1000) * 0.00002).toFixed(6))
+      : calculateCost(params.provider, promptTokens, completionTokens);
 
     logger.info(`[AIRouter Telemetry] Provider: ${params.provider} | Model: ${params.model} | Latency: ${params.latencyMs}ms | Tokens: ${totalTokens} | Cost: $${estimatedCost} | Fallback: ${params.fallbackUsed}`);
 

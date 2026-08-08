@@ -28,8 +28,7 @@ export class SemanticScholarProvider implements ResearchProvider {
   readonly name = 'semanticScholar' as const;
 
   isConfigured(): boolean {
-    // Public endpoint is usable without a key.
-    return true;
+    return !!config.semanticScholarApiKey;
   }
 
   /**
