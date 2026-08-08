@@ -5,6 +5,7 @@ import { logger } from '../core/logger.js';
 import { verifyToken } from '../utils/jwt.js';
 import User from '../models/User.js';
 import { setupSocketHandlers } from './handlers.js';
+import { publishResearchEvent, subscribeToResearchEvents } from '../events/researchEvents.js';
 
 let io: SocketIOServer | null = null;
 
@@ -82,6 +83,9 @@ export const createSocketServer = (httpServer: HttpServer): SocketIOServer => {
     setupSocketHandlers(socket);
   });
 
+  // Subscribe to Redis pub/sub for worker-emitted events
+  subscribeToResearchEvents(emitToRoom);
+
   logger.info('Socket.io server initialized');
   return io;
 };
@@ -119,7 +123,10 @@ export const emitResearchProgress = (
     message: string;
   }
 ): void => {
-  emitToRoom(`project:${projectId}`, 'research:progress', payload);
+  if (io) {
+    emitToRoom(`project:${projectId}`, 'research:progress', payload);
+  }
+  publishResearchEvent('research:progress', projectId, payload);
 };
 
 /**
@@ -133,7 +140,10 @@ export const emitResearchComplete = (
     durationMs?: number;
   }
 ): void => {
-  emitToRoom(`project:${projectId}`, 'research:complete', payload);
+  if (io) {
+    emitToRoom(`project:${projectId}`, 'research:complete', payload);
+  }
+  publishResearchEvent('research:complete', projectId, payload);
 };
 
 /**
@@ -147,14 +157,14 @@ export const emitResearchFailed = (
     error: string;
   }
 ): void => {
-  emitToRoom(`project:${projectId}`, 'research:failed', payload);
+  if (io) {
+    emitToRoom(`project:${projectId}`, 'research:failed', payload);
+  }
+  publishResearchEvent('research:failed', projectId, payload);
 };
 
 /**
- * Emit a batch of sources as soon as a single provider completes, so the
- * frontend can render results incrementally instead of waiting for the slowest
- * provider. Carries the provider's status + latency + count alongside the
- * normalized sources themselves.
+ * Emit a batch of sources as soon as a single provider completes.
  */
 export const emitResearchSources = (
   projectId: string,
@@ -169,12 +179,14 @@ export const emitResearchSources = (
     sources: unknown[];
   }
 ): void => {
-  emitToRoom(`project:${projectId}`, 'research:sources', payload);
+  if (io) {
+    emitToRoom(`project:${projectId}`, 'research:sources', payload);
+  }
+  publishResearchEvent('research:sources', projectId, payload);
 };
 
 /**
- * Emit the end-of-job provider health summary (per-provider status, latency and
- * result counts) so the frontend can render a resilience/diagnostics panel.
+ * Emit the end-of-job provider health summary.
  */
 export const emitProviderHealth = (
   projectId: string,
@@ -191,5 +203,9 @@ export const emitProviderHealth = (
     }>;
   }
 ): void => {
-  emitToRoom(`project:${projectId}`, 'research:provider-health', payload);
+  if (io) {
+    emitToRoom(`project:${projectId}`, 'research:provider-health', payload);
+  }
+  publishResearchEvent('research:provider-health', projectId, payload);
 };
+

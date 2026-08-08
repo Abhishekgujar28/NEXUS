@@ -67,13 +67,12 @@ const PROVIDER_POLICY_OVERRIDES: Partial<Record<ProviderName, Partial<ProviderPo
   // request never delays the rest of the pipeline.
   arxiv: { timeoutMs: 7000, maxAttempts: 2, baseDelayMs: 400, maxDelayMs: 2000 },
 
-  // Semantic Scholar — heavy 429 rate limiting. Longer, gentler backoff, more
-  // attempts, honour Retry-After, and space requests ~1s apart.
+  // Semantic Scholar — heavy 429 rate limiting. Bounded retries so query loops finish quickly.
   semanticScholar: {
-    timeoutMs: 12000,
-    maxAttempts: 4,
-    baseDelayMs: 1500,
-    maxDelayMs: 15000,
+    timeoutMs: 10000,
+    maxAttempts: 2,
+    baseDelayMs: 1000,
+    maxDelayMs: 4000,
     respectRetryAfter: true,
     minIntervalMs: 1100,
   },
@@ -81,9 +80,9 @@ const PROVIDER_POLICY_OVERRIDES: Partial<Record<ProviderName, Partial<ProviderPo
   stackoverflow: { timeoutMs: 6000, maxAttempts: 2, baseDelayMs: 400 },
   npm: { timeoutMs: 6000, maxAttempts: 2, baseDelayMs: 400 },
 
-  // IEEE Xplore — paid API; 403 (access/subscription) is common and must be
-  // isolated. Do not hammer it: single retry, treated as optional.
-  ieee: { timeoutMs: 10000, maxAttempts: 2, baseDelayMs: 800, optional: true },
+  // IEEE Xplore — paid API; 403 (access/subscription/inactive) is permanent and must be
+  // isolated. Single attempt, never retry 403.
+  ieee: { timeoutMs: 8000, maxAttempts: 1, baseDelayMs: 400, optional: true },
 };
 
 /** Resolve the effective policy for a provider (override merged over defaults). */

@@ -99,10 +99,24 @@ const withTimeout = async <T>(
  */
 const runProvider = async (
   provider: ResearchProvider,
-  query: string
+  query: string,
+  disabledProviders?: Set<ProviderName>
 ): Promise<ProviderResult> => {
   const policy = getProviderPolicy(provider.name);
   const start = Date.now();
+
+  if (disabledProviders?.has(provider.name)) {
+    logger.debug(`Provider "${provider.name}" disabled by circuit breaker — skipping`);
+    return {
+      provider: provider.name,
+      status: 'skipped',
+      count: 0,
+      latencyMs: 0,
+      optional: policy.optional,
+      error: 'Circuit breaker: provider disabled for this run',
+      sources: [],
+    };
+  }
 
   if (!provider.isConfigured()) {
     logger.debug(`Provider "${provider.name}" not configured — skipping`);
@@ -153,6 +167,14 @@ const runProvider = async (
       sources,
     };
   } catch (err) {
+    const status = (err as any)?.response?.status ?? (err as any)?.status;
+    if (disabledProviders && (status === 403 || status === 401 || status === 429)) {
+      disabledProviders.add(provider.name);
+      logger.warn(
+        `Immediate circuit breaker TRIPPED for "${provider.name}" (status=${status ?? 'ERR'}) — disabling for remaining queries in run`
+      );
+    }
+
     const message = err instanceof Error ? err.message : String(err);
     // Optional providers (IEEE 403, etc.) fail quietly and never block the job;
     // required providers log at error level.
@@ -186,7 +208,8 @@ const runProvider = async (
  */
 export const runResearchProviders = async (
   query: string,
-  onComplete?: ProviderCompleteCallback
+  onComplete?: ProviderCompleteCallback,
+  disabledProviders?: Set<ProviderName>
 ): Promise<RegistrySearchResult> => {
   const trimmed = query.trim();
   if (!trimmed) return { sources: [], outcomes: [] };
@@ -198,7 +221,7 @@ export const runResearchProviders = async (
   // instant it finishes rather than awaiting the slowest one.
   const settled = await Promise.allSettled(
     ALL_PROVIDERS.map(async (p) => {
-      const result = await runProvider(p, trimmed);
+      const result = await runProvider(p, trimmed, disabledProviders);
       if (onComplete) {
         try {
           await onComplete(result);

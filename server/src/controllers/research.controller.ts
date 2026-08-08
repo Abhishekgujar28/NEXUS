@@ -28,14 +28,26 @@ export const startResearch = async (req: Request, res: Response): Promise<void> 
 
   await ensureProjectAccessible(projectId);
 
-  const existingRunningJob = await ResearchJob.findOne({
+  // Invalidate / cancel any active running or queued jobs for this project
+  const activeJobs = await ResearchJob.find({
     projectId,
     status: { $in: ['queued', 'running'] },
-  }).select('_id status');
+  });
 
-  if (existingRunningJob) {
-    throw new AppError('A research job is already in progress', 409, ErrorCodes.CONFLICT);
+  if (activeJobs.length > 0) {
+    await ResearchJob.updateMany(
+      { _id: { $in: activeJobs.map((j) => j._id) } },
+      { $set: { status: 'cancelled', error: 'Superceded by a new research run' } }
+    );
   }
+
+  // Clear previous research artifacts for this project to ensure a completely fresh run
+  await Promise.all([
+    ResearchSource.deleteMany({ projectId }),
+    EvidenceClaim.deleteMany({ projectId }),
+    ExistingSolution.deleteMany({ projectId }),
+    InnovationGap.deleteMany({ projectId }),
+  ]);
 
   const job = await ResearchJob.create({
     projectId,
@@ -106,7 +118,16 @@ export const getResearchSources = async (req: Request, res: Response): Promise<v
   const skip = (page - 1) * limit;
   const sourceType = typeof req.query.type === 'string' ? req.query.type : undefined;
 
-  const query: Record<string, unknown> = { projectId };
+  const latestJob = await ResearchJob.findOne({ projectId }).sort({ createdAt: -1 }).select('_id');
+  if (!latestJob) {
+    res.json({
+      success: true,
+      data: { items: [], pagination: { page, limit, total: 0 } },
+    });
+    return;
+  }
+
+  const query: Record<string, unknown> = { projectId, researchJobId: latestJob._id };
   if (sourceType) {
     query.sourceType = sourceType;
   }
@@ -133,7 +154,13 @@ export const getEvidence = async (req: Request, res: Response): Promise<void> =>
   const projectId = req.params.id;
   await ensureProjectAccessible(projectId);
 
-  const evidence = await EvidenceClaim.find({ projectId }).sort({ createdAt: -1 });
+  const latestJob = await ResearchJob.findOne({ projectId }).sort({ createdAt: -1 }).select('_id');
+  if (!latestJob) {
+    res.json({ success: true, data: [] });
+    return;
+  }
+
+  const evidence = await EvidenceClaim.find({ projectId, researchJobId: latestJob._id }).sort({ createdAt: -1 });
   res.json({ success: true, data: evidence });
 };
 
@@ -141,7 +168,13 @@ export const getSolutions = async (req: Request, res: Response): Promise<void> =
   const projectId = req.params.id;
   await ensureProjectAccessible(projectId);
 
-  const solutions = await ExistingSolution.find({ projectId }).sort({ createdAt: -1 });
+  const latestJob = await ResearchJob.findOne({ projectId }).sort({ createdAt: -1 }).select('_id');
+  if (!latestJob) {
+    res.json({ success: true, data: [] });
+    return;
+  }
+
+  const solutions = await ExistingSolution.find({ projectId, researchJobId: latestJob._id }).sort({ createdAt: -1 });
   res.json({ success: true, data: solutions });
 };
 
@@ -149,7 +182,13 @@ export const getGaps = async (req: Request, res: Response): Promise<void> => {
   const projectId = req.params.id;
   await ensureProjectAccessible(projectId);
 
-  const gaps = await InnovationGap.find({ projectId }).sort({ createdAt: -1 });
+  const latestJob = await ResearchJob.findOne({ projectId }).sort({ createdAt: -1 }).select('_id');
+  if (!latestJob) {
+    res.json({ success: true, data: [] });
+    return;
+  }
+
+  const gaps = await InnovationGap.find({ projectId, researchJobId: latestJob._id }).sort({ createdAt: -1 });
   res.json({ success: true, data: gaps });
 };
 

@@ -60,7 +60,7 @@ export const setupSocketHandlers = (socket: Socket): void => {
 
       const roomName = `project:${projectId}`;
       socket.join(roomName);
-      logger.info(`Socket [${socket.id}] (User ${user._id}) joined room: ${roomName}`);
+      logger.debug(`Socket [${socket.id}] (User ${user._id}) joined room: ${roomName}`);
 
       const successRes = { success: true, data: { room: roomName, projectId } };
       if (callback) callback(successRes);
@@ -85,7 +85,7 @@ export const setupSocketHandlers = (socket: Socket): void => {
       const roomName = `project:${projectId}`;
 
       socket.leave(roomName);
-      logger.info(`Socket [${socket.id}] left room: ${roomName}`);
+      logger.debug(`Socket [${socket.id}] left room: ${roomName}`);
 
       const successRes = { success: true, data: { room: roomName, projectId } };
       if (callback) callback(successRes);

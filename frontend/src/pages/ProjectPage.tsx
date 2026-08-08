@@ -79,7 +79,7 @@ export function ProjectPage() {
     queryKey: ['project-stats', projectId],
     queryFn: () => projectsService.stats(projectId!),
     enabled: !!projectId,
-    refetchInterval: project?.status === 'researching' ? 5000 : false,
+    refetchInterval: project?.status === 'researching' ? 10000 : false,
   });
 
   const startResearch = useMutation({

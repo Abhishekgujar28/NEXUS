@@ -11,9 +11,7 @@ export interface PipelineStageItem {
 export const STAGES_LIST: Array<{ key: string; label: string }> = [
   { key: 'understand', label: 'Understand Scope' },
   { key: 'plan', label: 'Query Planning' },
-  { key: 'search_web', label: 'Search Web' },
-  { key: 'search_papers', label: 'Search Papers' },
-  { key: 'search_github', label: 'Search GitHub' },
+  { key: 'search', label: 'Searching Sources' },
   { key: 'analyze', label: 'Analyze Claims' },
   { key: 'solutions', label: 'Competitor Solutions' },
   { key: 'gaps', label: 'Gap Discovery' },
@@ -39,7 +37,7 @@ export function PipelineStepper({
         <div>
           <h3 className="text-sm font-semibold text-foreground">Autonomous Research Pipeline</h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            11-Stage multi-agent orchestration engine
+            9-Stage multi-agent orchestration engine
           </p>
         </div>
         <div className="text-right">
@@ -49,7 +47,7 @@ export function PipelineStepper({
       </div>
 
       {/* Stepper Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-11 gap-2 pt-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-9 gap-2 pt-2">
         {STAGES_LIST.map((stage, idx) => {
           const isDone = completedKeys.includes(stage.key) || progress === 100;
           const isCurrent = currentStageKey === stage.key && !isDone;

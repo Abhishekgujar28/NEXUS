@@ -130,9 +130,7 @@ export interface ProjectStats {
 export type ResearchStageKey =
   | 'understand'
   | 'plan'
-  | 'search_web'
-  | 'search_papers'
-  | 'search_github'
+  | 'search'
   | 'analyze'
   | 'solutions'
   | 'gaps'

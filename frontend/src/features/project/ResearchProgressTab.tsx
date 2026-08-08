@@ -71,7 +71,7 @@ export function ResearchProgressTab({ projectId }: { projectId: ID }) {
     queryFn: () => researchService.job(projectId),
     refetchInterval: (q) => {
       const s = q.state?.data?.status;
-      return s === 'running' || s === 'queued' ? 3000 : false;
+      return s === 'running' || s === 'queued' ? 10000 : false;
     },
   });
 

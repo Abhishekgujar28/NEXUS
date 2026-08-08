@@ -138,12 +138,15 @@ export const getProjectStats = async (req: Request, res: Response): Promise<void
   const { id } = req.params;
   await assertCanAccessProject(id, userId);
 
-  const [sourceCount, gapCount, solutionCount, lastJob] = await Promise.all([
-    ResearchSource.countDocuments({ projectId: id }),
-    InnovationGap.countDocuments({ projectId: id }),
-    ExistingSolution.countDocuments({ projectId: id }),
-    ResearchJob.findOne({ projectId: id }).sort({ createdAt: -1 }).select('status progress updatedAt'),
-  ]);
+  const lastJob = await ResearchJob.findOne({ projectId: id }).sort({ createdAt: -1 }).select('_id status progress updatedAt');
+
+  const [sourceCount, gapCount, solutionCount] = lastJob
+    ? await Promise.all([
+        ResearchSource.countDocuments({ projectId: id, researchJobId: lastJob._id }),
+        InnovationGap.countDocuments({ projectId: id, researchJobId: lastJob._id }),
+        ExistingSolution.countDocuments({ projectId: id, researchJobId: lastJob._id }),
+      ])
+    : [0, 0, 0];
 
   res.json({
     success: true,

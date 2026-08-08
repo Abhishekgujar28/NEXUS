@@ -48,16 +48,14 @@ const sourceHash = (source: NormalizedSource): string => {
  * Progress mapping per pipeline stage key (0 - 100).
  */
 const STAGE_PROGRESS_MAP: Record<string, number> = {
-  understand: 5,
-  plan: 15,
-  search_web: 25,
-  search_papers: 30,
-  search_github: 35,
+  understand: 10,
+  plan: 20,
+  search: 40,
   analyze: 50,
-  solutions: 55,
-  gaps: 65,
-  stress: 75,
-  architecture: 88,
+  solutions: 60,
+  gaps: 70,
+  stress: 80,
+  architecture: 90,
   roadmap: 100,
 };
 
@@ -328,11 +326,9 @@ export class ResearchOrchestrator {
         await this.saveCheckpoint('queries', 2, queries);
       }
 
-      // Stage 3-5: Deep Search (Web, Papers, Code)
-      this.setStage(job, 'search_web', 'running');
-      this.setStage(job, 'search_papers', 'running');
-      this.setStage(job, 'search_github', 'running');
-      job.progress = STAGE_PROGRESS_MAP.search_github;
+      // Stage 3: Deep Search (Web, Papers, Code)
+      this.setStage(job, 'search', 'running');
+      job.progress = STAGE_PROGRESS_MAP.search;
       await job.save();
 
       const deepSearch = new DeepSearchAgent();
@@ -367,9 +363,7 @@ export class ResearchOrchestrator {
         .map((p) => `${p.provider}:${p.status}(${p.count})`)
         .join(', ');
 
-      this.setStage(job, 'search_web', searchStatus, healthNote);
-      this.setStage(job, 'search_papers', searchStatus, healthNote);
-      this.setStage(job, 'search_github', searchStatus, healthNote);
+      this.setStage(job, 'search', searchStatus, healthNote);
       job.sourceCount = uniqueSources.size;
       await job.save();
 
@@ -536,6 +530,17 @@ export class ResearchOrchestrator {
         },
       });
 
+      // Synchronously complete RAG vector indexing before marking job completed
+      // so Copilot search is 100% ready the moment research:complete fires.
+      try {
+        logger.info(`[ResearchRun] Indexing RAG sources for job ${this.researchJobId}`);
+        await indexResearchSources(this.projectId, this.researchJobId);
+      } catch (ragErr) {
+        logger.warn(`RAG indexing encountered an issue for project [${this.projectId}]`, {
+          error: (ragErr as Error).message,
+        });
+      }
+
       // Mark Job Completed
       job.status = 'completed';
       job.completedAt = new Date();
@@ -547,19 +552,20 @@ export class ResearchOrchestrator {
       };
       await job.save();
 
+      const totalDurationMs = Date.now() - (job.startedAt ? job.startedAt.getTime() : Date.now());
+
       emitResearchComplete(this.projectId, {
         jobId: this.researchJobId,
         projectId: this.projectId,
-        durationMs: Date.now() - (job.startedAt ? job.startedAt.getTime() : Date.now()),
+        durationMs: totalDurationMs,
       });
 
-      logger.info(`ResearchOrchestrator completed successfully for job ${this.researchJobId}`);
-
-      // Asynchronously trigger RAG vector indexing for retrieved research sources
-      indexResearchSources(this.projectId, this.researchJobId).catch((err) => {
-        logger.warn(`RAG indexing failed for project [${this.projectId}]`, {
-          error: (err as Error).message,
-        });
+      logger.info(`[ResearchRun] Completed successfully`, {
+        runId: this.researchJobId,
+        projectId: this.projectId,
+        totalDurationMs,
+        totalQueries: queries?.length ?? 0,
+        sourceCount: job.sourceCount,
       });
     } catch (err) {
       const isAIError = err instanceof AIProviderError;
