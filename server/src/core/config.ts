@@ -109,6 +109,9 @@ export const validateConfig = (): void => {
     if (config.jwt.secret === config.jwt.refreshSecret) {
       throw new Error('JWT_SECRET and JWT_REFRESH_SECRET must differ.');
     }
+    if (config.mongoUri.includes('localhost') || config.mongoUri.includes('127.0.0.1')) {
+      throw new Error('In production, MONGODB_URI must point to a remote database (e.g. MongoDB Atlas), not localhost.');
+    }
   }
 };
 

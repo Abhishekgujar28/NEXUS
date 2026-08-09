@@ -1,0 +1,101 @@
+# =========================================================
+# NEXUS Infrastructure Blueprint for Render Deployment
+# =========================================================
+version: "1"
+
+services:
+  # 1. API Web Service (Express HTTP + Socket.IO Server)
+  - type: web
+    name: nexus-api
+    env: node
+    rootDir: server
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: nexus-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: DEFAULT_AI_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: SEMANTIC_SCHOLAR_API_KEY
+        sync: false
+      - key: KROKI_URL
+        value: https://kroki.io
+      - key: VECTOR_STORE
+        value: memory
+
+  # 2. Research Background Worker (BullMQ Multi-Agent Pipeline)
+  - type: worker
+    name: nexus-research-worker
+    env: node
+    rootDir: server
+    buildCommand: npm run build
+    startCommand: npm run worker:prod
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_URI
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: nexus-redis
+          property: connectionString
+      - key: JWT_SECRET
+        fromService:
+          type: web
+          name: nexus-api
+          envVarKey: JWT_SECRET
+      - key: JWT_REFRESH_SECRET
+        fromService:
+          type: web
+          name: nexus-api
+          envVarKey: JWT_REFRESH_SECRET
+      - key: DEFAULT_AI_PROVIDER
+        value: openrouter
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: SEMANTIC_SCHOLAR_API_KEY
+        sync: false
+      - key: KROKI_URL
+        value: https://kroki.io
+      - key: VECTOR_STORE
+        value: memory
+      - key: RESEARCH_WORKER_CONCURRENCY
+        value: "2"
+
+  # 3. Redis Instance (BullMQ Job Queues & Socket.IO Redis Adapter Pub/Sub)
+  - type: redis
+    name: nexus-redis
+    ipAllowList: [] # Private network access only

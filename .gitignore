@@ -10,11 +10,13 @@ coverage/
 .DS_Store
 .vscode/
 .idea/
+.DEPLOYMENT.md
 
-# Ignore markdown files except README.md
+# Ignore markdown files except README.md and DEPLOYMENT.md
 *.md
 !README.md
 !readme.md
 !**/README.md
 !**/readme.md
-
+!**/DEPLOYMENT.md
+!**/deployment.md
