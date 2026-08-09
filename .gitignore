@@ -12,11 +12,5 @@ coverage/
 .idea/
 .DEPLOYMENT.md
 
-# Ignore markdown files except README.md and DEPLOYMENT.md
+# Ignore all markdown files
 *.md
-!README.md
-!readme.md
-!**/README.md
-!**/readme.md
-!**/DEPLOYMENT.md
-!**/deployment.md
