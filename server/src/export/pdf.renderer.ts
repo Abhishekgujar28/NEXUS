@@ -1,5 +1,5 @@
 // @ts-ignore
-import PdfPrinter from 'pdfmake/js/printer.js';
+import PdfPrinter from 'pdfmake/js/Printer.js';
 import { TDocumentDefinitions, Content, TableCell } from 'pdfmake/interfaces.js';
 import { ResearchExportData } from './export.types.js';
 
