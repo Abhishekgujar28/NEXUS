@@ -38,9 +38,13 @@ export const createApp = (): Application => {
   app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   app.use(generalLimiter);
 
-  app.get('/health', (_req, res) => {
-    res.json({ success: true, data: { status: 'ok' } });
-  });
+app.get("/health", (_req, res) => {
+res.status(200).json({
+success: true,
+message: "Server is healthy",
+timestamp: new Date().toISOString(),
+});
+});
 
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1/projects', projectRoutes);
