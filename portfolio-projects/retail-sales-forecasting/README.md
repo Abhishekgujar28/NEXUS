@@ -10,7 +10,7 @@ A time-series regression experiment comparing a seven-day seasonal-naive baselin
 - Calls out limitations involving missing dates, promotions, holidays, and changing store conditions.
 
 ## Dataset
-Use the public Kaggle **Store Sales - Time Series Forecasting** dataset. Download `train.csv` and save it as `data/train.csv`. The dataset is not included here; review the dataset's license/terms before use.
+Use the public Kaggle [Store Sales - Time Series Forecasting](https://www.kaggle.com/competitions/store-sales-time-series-forecasting/data) dataset. Download `train.csv` and save it as `data/train.csv`. A Kaggle account and competition-rule acceptance may be required. The dataset is not included here; review the dataset's license/terms before use.
 
 ## Run locally
 ```bash
