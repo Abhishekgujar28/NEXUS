@@ -10,7 +10,7 @@ A reproducible machine-learning workflow for exploring customer churn and evalua
 - Documents the risks of class imbalance, leakage, and interpreting predictive association as causation.
 
 ## Dataset
-Use a public Telco Customer Churn dataset whose CSV includes a `Churn` column and (optionally) `customerID` and `TotalCharges`. Save it as `data/telco_churn.csv`. The CSV is not stored in this repository. Follow the source dataset's license and terms.
+Use a public Telco Customer Churn dataset whose CSV includes a `Churn` column and (optionally) `customerID` and `TotalCharges`. One accessible copy is [here](https://raw.githubusercontent.com/Giskard-AI/examples/main/datasets/WA_Fn-UseC_-Telco-Customer-Churn.csv). Save it as `data/telco_churn.csv`. The CSV is not stored in this repository. Follow the source dataset's license and terms.
 
 ## Run locally
 ```bash
