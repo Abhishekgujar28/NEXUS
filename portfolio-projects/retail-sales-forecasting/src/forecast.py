@@ -43,10 +43,10 @@ def main() -> None:
     model.fit(train[features], train['sales'])
     model_pred = model.predict(test[features])
     for name, pred in [('Seasonal naive (7-day lag)', baseline_pred), ('Random forest + calendar/lag features', model_pred)]:
-        print(f'\\n{name}')
+        print(f'\n{name}')
         print(f'MAE:  {mean_absolute_error(test.sales, pred):.3f}')
         print(f'RMSE: {np.sqrt(mean_squared_error(test.sales, pred)):.3f}')
-    print(f'\\nHoldout dates: {test.date.min().date()} to {test.date.max().date()}')
+    print(f'\nHoldout dates: {test.date.min().date()} to {test.date.max().date()}')
     print('Interpret as a rolling one-step-ahead benchmark; account for missing dates, promotions, holidays, and changing store conditions.')
 if __name__ == '__main__':
     main()
