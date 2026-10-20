@@ -45,7 +45,7 @@ def main() -> None:
         model.fit(X_train, y_train)
         pred = model.predict(X_test)
         prob = model.predict_proba(X_test)[:, 1]
-        print(f'\\n## {name}')
+        print(f'\n## {name}')
         print(classification_report(y_test, pred, target_names=['No churn', 'Churn'], zero_division=0))
         print(f'ROC-AUC: {roc_auc_score(y_test, prob):.4f}')
         if name == 'Logistic Regression':
@@ -53,6 +53,6 @@ def main() -> None:
             disp.plot(cmap='Blues', values_format='d')
             plt.title('Customer Churn — Logistic Regression')
             plt.tight_layout(); plt.savefig(out / 'confusion_matrix.png', dpi=160); plt.close()
-    print('\\nInterpret metrics in light of class imbalance and business costs; predictive associations are not causal explanations.')
+    print('\nInterpret metrics in light of class imbalance and business costs; predictive associations are not causal explanations.')
 if __name__ == '__main__':
     main()
